@@ -1,4 +1,4 @@
-//Ali Soltani 403106092
+// Ali Soltani 403106092
 #pragma region includings
 #include <stdio.h>
 #include <ncurses.h>
@@ -15,7 +15,6 @@
 #pragma endregion
 
 #pragma region Structs
-
 
 typedef struct Room
 {
@@ -49,6 +48,7 @@ typedef struct door
 typedef struct Weapon
 {
     int mode;
+    int times_use_left;
 } Weapon;
 
 typedef struct Spell
@@ -73,19 +73,35 @@ typedef struct Food
 {
     int type;
 } Food;
+
+typedef struct Enemy
+{
+    char type;
+    double hp;
+    int move;
+    int x;
+    int y;
+} Enemy;
+
+typedef struct Wasted_Weapon
+{
+    int x;
+    int y;
+} Wasted_Weapon;
+
 #pragma endregion
 
-#pragma region Globools
-int lood = 0;
+#pragma region Globool
 int hiden_door_show = 0;
-const int rows=38;
-const int cols=183;
+int lood = 0;
+const int rows = 38;
+const int cols = 183;
 int genone = 0;
 char Line1[200];
 char Line2[200];
 char Player_UserName[100];
 int level = 1;
-int color = 1;
+int color = 4;
 int playerGOLD = 0;
 int playerHP = 1000;
 int playerHPMax = 1000;
@@ -97,13 +113,22 @@ int UsedKey = 0;
 int WeaponCount = 1;
 int SpellCount = 0;
 int FoodCount = 0;
+int EnemyCount = 0;
 int MovesTillLastFood = 0;
-int PlayerFood = 10;
+double PlayerFood = 10;
 int m = -1;
 int onetime = 0;
+double power = 1;
+double speed = 0;
+int Health_Pot = 0;
+int MovesTillLastpot = 0;
+char Current_Weapon = 'm';
+int Wasted_Weapon_Count = 0;
+Wasted_Weapon *Wasted_Weapon_Array;
 Weapon *WeaponArray;
 Spell *SpellArray;
 Food *FoodArray;
+Enemy *EnemyArray;
 // O = Pillar
 // G,g = Gold
 // A = Ancientkey
@@ -114,7 +139,7 @@ Food *FoodArray;
 // Z(z,x,c,v) food
 //  gcc -o my_program my_program.c -lncursesw -lSDL2 -lSDL2_mixer
 //./ali
-//color();
+// color();
 // 1 Blue
 // 2 Green
 // 3 Cyan
@@ -122,7 +147,6 @@ Food *FoodArray;
 // 5 Red
 // 6 White
 // 7 Yellow
-
 
 int y, x;
 char map[38][183];
@@ -141,24 +165,7 @@ bool firsttime = true;
 #pragma endregion
 
 #pragma region Func_Prototype
-void Rogue_Animation();
-char LoginorRegisterPage();
-void ForgotPassword(const char Username[100], const char text[100]);
-void Login();
-void Register();
-void MainMenu();
-void Settings();
-int YesNoChoice();
-void FoodChoice();
-void SaveGame_StairCase();
-void LoadGame_StairCase();
-void MakeRoom();
-int MakeGame(int c);
-void NewGame();
-void BeforeGame();
-void play_music(const char *filename);
-void AddtoScoreBoard();
-void ScoreBoard();
+void play_music(const char *filename);void Rogue_Animation();char LoginorRegisterPage();void ForgotPassword(const char Username[100], const char text[100]);void Login();void Register();void MainMenu();void Colours();void Song();void Difficulty();void Settings();int YesNoChoice();void FoodChoice();void SpellChoice();void WeaponChoice();void SaveGame_StairCase();void LoadGame_StairCase();void AddtoScoreBoard();void ScoreBoard();void MakeRoom();void Player_Time();void load();void save();void Enemy_gen();void Enemy_Move();void Lose();void Won();void battle(int yy, int xx);int Check_Enemy(int yy, int xx);void Far_Battle();int MakeGame(int c);void NewGame();void Times_PLayed();void BeforeGame();int main();void Telesm_Room();int YesNoChoice_H();void Inventory();
 #pragma endregion
 
 Mix_Music *music;
@@ -595,7 +602,7 @@ void Login()
         {
             clear();
             printw("Sucsessfully logged in as %s\n", Username);
-            strcpy(Player_UserName,Username);
+            strcpy(Player_UserName, Username);
             break;
         }
         fclose(pf);
@@ -655,7 +662,7 @@ void Register()
         }
         fclose(pf1);
     }
-    strcpy(Player_UserName,Username);
+    strcpy(Player_UserName, Username);
     int valid = 0;
     int valid2 = 0;
     while (valid == 0)
@@ -1351,6 +1358,7 @@ void Settings()
 
 int YesNoChoice()
 {
+    clear();
     int c;
     int u = 0;
     int cursor = 0;
@@ -1521,12 +1529,12 @@ void FoodChoice()
     }
     clear();
     attron(A_BOLD);
-    mvprintw(3, cols/2 - 10, "Normal Food and Bad food: %d", normalfood + badfood);
-    mvprintw(4, cols/2 - 10, "Good Food : %d", goodfood);
-    mvprintw(5, cols/2 - 10, "Magic Food : %d", magicfood);
+    mvprintw(3, cols / 2 - 10, "Normal Food and Bad food: %d", normalfood + badfood);
+    mvprintw(4, cols / 2 - 10, "Good Food : %d", goodfood);
+    mvprintw(5, cols / 2 - 10, "Magic Food : %d", magicfood);
     attroff(A_BOLD);
     attron(A_BLINK | A_BOLD);
-    mvprintw(7,cols/2 - 10,"Press Anything to Continue!");
+    mvprintw(7, cols / 2 - 10, "Press Anything to Continue!");
     attroff(A_BLINK | A_BOLD);
     char cc = getch();
     clear();
@@ -1559,7 +1567,7 @@ void FoodChoice()
         else
         {
             wchar_t message[] = L"₪ ";
-	        mvprintw(9, colss, "%ls Normal and Bad Food\n", message);
+            mvprintw(9, colss, "%ls Normal and Bad Food\n", message);
         }
         if (cursor == 1)
         {
@@ -1572,7 +1580,7 @@ void FoodChoice()
         else
         {
             wchar_t message[] = L"₪ ";
-	        mvprintw(11, colss, "%ls Good Food", message);
+            mvprintw(11, colss, "%ls Good Food", message);
         }
         if (cursor == 2)
         {
@@ -1585,7 +1593,7 @@ void FoodChoice()
         else
         {
             wchar_t message[] = L"₪ ";
-	        mvprintw(13, colss, "%ls Magic Food", message);
+            mvprintw(13, colss, "%ls Magic Food", message);
         }
         if (cursor == 3)
         {
@@ -1598,7 +1606,7 @@ void FoodChoice()
         else
         {
             wchar_t message[] = L"₪ ";
-	        mvprintw(15, colss, "%ls Back", message);
+            mvprintw(15, colss, "%ls Back", message);
         }
         c = getch();
 
@@ -1619,11 +1627,11 @@ void FoodChoice()
         {
             valid = 1;
         }
-        if (cursor == 1 && goodfood > 0&& PlayerFood != 10)
+        if (cursor == 1 && goodfood > 0 && PlayerFood != 10)
         {
             valid = 1;
         }
-        if (cursor == 2 && magicfood > 0&& PlayerFood != 10)
+        if (cursor == 2 && magicfood > 0 && PlayerFood != 10)
         {
             valid = 1;
         }
@@ -1657,7 +1665,7 @@ void FoodChoice()
         }
         else
         {
-            if(normalfood == 0)
+            if (normalfood == 0)
             {
                 for (int i = 0; i < FoodCount; i++)
                 {
@@ -1667,13 +1675,13 @@ void FoodChoice()
                         break;
                     }
                 }
-                if (PlayerFood - (FoodEffect/2) < 0)
+                if (PlayerFood - (FoodEffect / 2) < 0)
                 {
                     PlayerFood = 0;
                 }
                 else
                 {
-                    PlayerFood -= (FoodEffect/2);
+                    PlayerFood -= (FoodEffect / 2);
                 }
             }
             else
@@ -1709,26 +1717,27 @@ void FoodChoice()
                             break;
                         }
                     }
-                    if (PlayerFood - (FoodEffect/2) < 0)
+                    if (PlayerFood - (FoodEffect / 2) < 0)
                     {
                         PlayerFood = 0;
                     }
                     else
                     {
-                        PlayerFood -= (FoodEffect/2);
+                        PlayerFood -= (FoodEffect / 2);
                     }
                 }
             }
         }
+        return;
     }
     // good food
     if (cursor == 1)
     {
-        //power += 0.5;
+        power += 0.5;
         MovesTillLastFood = 0;
-        for(int i = 0 ; i < FoodCount;i++)
+        for (int i = 0; i < FoodCount; i++)
         {
-            if(FoodArray[i].type == 1)
+            if (FoodArray[i].type == 1)
             {
                 FoodArray[i].type = -1;
                 break;
@@ -1742,15 +1751,16 @@ void FoodChoice()
         {
             PlayerFood += FoodEffect;
         }
+        return;
     }
     // magic food
     if (cursor == 2)
     {
         MovesTillLastFood = 0;
-        //speed = 2;
-        for(int i = 0 ; i < FoodCount;i++)
+        speed = 2;
+        for (int i = 0; i < FoodCount; i++)
         {
-            if(FoodArray[i].type == 2)
+            if (FoodArray[i].type == 2)
             {
                 FoodArray[i].type = -1;
                 break;
@@ -1764,11 +1774,492 @@ void FoodChoice()
         {
             PlayerFood += FoodEffect;
         }
+        return;
     }
-    //none
+    // none
     if (cursor == 3)
     {
         return;
+    }
+}
+
+void SpellChoice()
+{
+    int health = 0;
+    int speed1 = 0;
+    int damage = 0;
+    for (int i = 0; i < SpellCount; i++)
+    {
+        if (SpellArray[i].mode == 6)
+        {
+            health++;
+        }
+        if (SpellArray[i].mode == 7)
+        {
+            speed1++;
+        }
+        if (SpellArray[i].mode == 8)
+        {
+            damage++;
+        }
+    }
+    clear();
+    attron(A_BOLD);
+    mvprintw(3, cols / 2 - 10, "Health : %d", health);
+    mvprintw(4, cols / 2 - 10, "Speed : %d", speed1);
+    mvprintw(5, cols / 2 - 10, "Damage : %d", damage);
+    attroff(A_BOLD);
+    attron(A_BLINK);
+    mvprintw(7, cols / 2 - 10, "Press any key to continue!");
+    attroff(A_BLINK);
+    char cc = getch();
+    clear();
+    //
+    int c;
+    int u = 0;
+    int cursor = 0;
+    int valid = 0;
+    int colss = (getmaxx(stdscr) / 2);
+    colss -= 10;
+    do
+    {
+        valid = 0;
+        clear();
+        attron(A_BOLD);
+        wchar_t message1[] = L"╔══════════════════════════════╗";
+        mvprintw(2, colss - 10, "%ls", message1);
+        wchar_t message2[] = L"║             Spell            ║";
+        mvprintw(4, colss - 10, "%ls", message2);
+        wchar_t message3[] = L"╚══════════════════════════════╝";
+        mvprintw(6, colss - 10, "%ls", message3);
+        attroff(A_BOLD);
+        if (cursor == 0)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(9, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(9, colss + 4, "Health");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(9, colss, "%ls Health\n", message);
+        }
+        if (cursor == 1)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(11, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(11, colss + 4, "Speed");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(11, colss, "%ls Speed\n", message);
+        }
+        if (cursor == 2)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(13, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(13, colss + 4, "Damage");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(13, colss, "%ls Damage\n", message);
+        }
+        if (cursor == 3)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(15, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(15, colss + 4, "Back");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(15, colss, "%ls Back\n", message);
+        }
+        c = getch();
+
+        if (c == KEY_UP)
+        {
+            cursor--;
+            if (cursor < 0)
+                cursor = 3;
+        }
+
+        if (c == KEY_DOWN)
+        {
+            cursor++;
+            if (cursor > 3)
+                cursor = 0;
+        }
+        if (cursor == 0 && health > 0)
+        {
+            valid = 1;
+        }
+        if (cursor == 1 && speed1 > 0)
+        {
+            valid = 1;
+        }
+        if (cursor == 2 && damage > 0)
+        {
+            valid = 1;
+        }
+        if (cursor == 3)
+        {
+            valid = 1;
+        }
+    } while (c != 10 || valid <= 0);
+    clear();
+    // Health
+    if (cursor == 0)
+    {
+        if (PlayerFood < 8)
+        {
+            PlayerFood = 8;
+        }
+        MovesTillLastpot += 10;
+        for (int i = 0; i < SpellCount; i++)
+        {
+            if (SpellArray[i].mode == 6)
+            {
+                SpellArray[i].mode = -1;
+                break;
+            }
+        }
+        Health_Pot = 100;
+    }
+    // Speed
+    if (cursor == 1)
+    {
+        speed = 2;
+        for (int i = 0; i < SpellCount; i++)
+        {
+            if (SpellArray[i].mode == 7)
+            {
+                SpellArray[i].mode = -1;
+                break;
+            }
+        }
+    }
+    // Damage
+    if (cursor == 2)
+    {
+        power += 0.5;
+        for (int i = 0; i < SpellCount; i++)
+        {
+            if (SpellArray[i].mode == 8)
+            {
+                SpellArray[i].mode = -1;
+                break;
+            }
+        }
+    }
+    // none
+    if (cursor == 3)
+    {
+    }
+}
+
+void WeaponChoice()
+{
+    int mace = 0;
+    int dagger = 0;
+    int magicwand = 0;
+    int normalarrow = 0;
+    int sword = 0;
+    for (int i = 0; i < WeaponCount; i++)
+    {
+        if (WeaponArray[i].mode == 1)
+        {
+            mace++;
+        }
+        if (WeaponArray[i].mode == 2)
+        {
+            dagger += WeaponArray[i].times_use_left;
+        }
+        if (WeaponArray[i].mode == 3)
+        {
+            magicwand += WeaponArray[i].times_use_left;
+        }
+        if (WeaponArray[i].mode == 4)
+        {
+            normalarrow += WeaponArray[i].times_use_left;
+        }
+        if (WeaponArray[i].mode == 5)
+        {
+            sword++;
+        }
+    }
+    //
+    int c;
+    int u = 0;
+    int cursor = 0;
+    int colss = (getmaxx(stdscr) / 2);
+    colss -= 10;
+    do
+    {
+        clear();
+        /*mvprintw(0, 0, "Mace : %d CloseRange", mace);
+        mvprintw(1, 0, "Dagger : %d FarRange", dagger);
+        mvprintw(2, 0, "Magic Wand : %d FarRange", magicwand);
+        mvprintw(3, 0, "Normal Arrow : %d FarRange", normalarrow);
+        mvprintw(4, 0, "Sword : %d CloseRange", sword);*/
+        attron(A_BOLD);
+        wchar_t message1[] = L"╔══════════════════════════════╗";
+        mvprintw(2, colss - 10, "%ls", message1);
+        mvprintw(4, colss - 10, "Mace : %d CloseRange  Damage: 5", mace);
+        mvprintw(8, colss - 10, "Dagger : %d FarRange  Damage: 12", dagger);
+        mvprintw(6, colss - 10, "Magic Wand : %d FarRange  Damage: 15", magicwand);
+        mvprintw(7, colss - 10, "Normal Arrow : %d FarRange  Damage: 5", normalarrow);
+        mvprintw(5, colss - 10, "Sword : %d CloseRange  Damage: 10", sword);
+        wchar_t message3[] = L"╚══════════════════════════════╝";
+        mvprintw(10, colss - 10, "%ls", message3);
+        attroff(A_BOLD);
+        if (cursor == 0)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(13, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(13, colss + 4, "Back to Game");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(13, colss, "%ls Back to Game", message);
+        }
+        if (cursor == 1)
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(15, colss, "%ls", message);
+            attron(COLOR_PAIR(77) | A_BOLD);
+            mvprintw(15, colss + 4, "Change Weapon");
+            attroff(COLOR_PAIR(77) | A_BOLD);
+        }
+        else
+        {
+            wchar_t message[] = L"₪ ";
+            mvprintw(15, colss, "%ls Change Weapon", message);
+        }
+
+        c = getch();
+
+        if (c == KEY_UP)
+        {
+            cursor--;
+            if (cursor < 0)
+                cursor = 1;
+        }
+
+        if (c == KEY_DOWN)
+        {
+            cursor++;
+            if (cursor > 1)
+                cursor = 0;
+        }
+    } while (c != 10);
+    clear();
+    if (cursor == 0)
+    {
+        return;
+    }
+    else
+    {
+        clear();
+        //
+        int cc;
+        int uu = 0;
+        int cursorr = 0;
+        int validd = 0;
+        char curw[100];
+        if (Current_Weapon == 'm')
+        {
+            strcpy(curw, "Mace");
+        }
+        if (Current_Weapon == 'D')
+        {
+            strcpy(curw, "Dagger");
+        }
+        if (Current_Weapon == 'M')
+        {
+            strcpy(curw, "Magic Wand");
+        }
+        if (Current_Weapon == 'N')
+        {
+            strcpy(curw, "Normal Arrow");
+        }
+        if (Current_Weapon == 'S')
+        {
+            strcpy(curw, "Sword");
+        }
+        do
+        {
+            validd = 0;
+            clear();
+            // mvprintw(0, 0, "You are Currently holding %s",curw);
+            attron(A_BOLD);
+            wchar_t message1[] = L"╔══════════════════════════════╗";
+            mvprintw(2, colss - 10, "%ls", message1);
+            mvprintw(4, colss - 10, "You are Currently holding %s", curw);
+            wchar_t message3[] = L"╚══════════════════════════════╝";
+            mvprintw(6, colss - 10, "%ls", message3);
+            attroff(A_BOLD);
+            if (cursorr == 0)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(9, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(9, colss + 4, "Mace");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(9, colss, "%ls Mace", message);
+            }
+            if (cursorr == 1)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(11, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(11, colss + 4, "Dagger");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(11, colss, "%ls Dagger", message);
+            }
+            if (cursorr == 2)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(13, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(13, colss + 4, "Magic Wand");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(13, colss, "%ls Magic Wand", message);
+            }
+            if (cursorr == 3)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(15, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(15, colss + 4, "Normal Arrow");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(15, colss, "%ls Normal Arrow", message);
+            }
+            if (cursorr == 4)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(17, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(17, colss + 4, "Sword");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(17, colss, "%ls Sword", message);
+            }
+            if (cursorr == 5)
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(19, colss, "%ls", message);
+                attron(COLOR_PAIR(77) | A_BOLD);
+                mvprintw(19, colss + 4, "Back");
+                attroff(COLOR_PAIR(77) | A_BOLD);
+            }
+            else
+            {
+                wchar_t message[] = L"₪ ";
+                mvprintw(19, colss, "%ls Back", message);
+            }
+            cc = getch();
+
+            if (cc == KEY_UP)
+            {
+                cursorr--;
+                if (cursorr < 0)
+                    cursorr = 5;
+            }
+
+            if (cc == KEY_DOWN)
+            {
+                cursorr++;
+                if (cursorr > 5)
+                    cursorr = 0;
+            }
+            if (cursorr == 0 && mace > 0)
+            {
+                validd = 1;
+            }
+            if (cursorr == 1 && dagger > 0)
+            {
+                validd = 1;
+            }
+            if (cursorr == 2 && magicwand > 0)
+            {
+                validd = 1;
+            }
+            if (cursorr == 3 && normalarrow > 0)
+            {
+                validd = 1;
+            }
+            if (cursorr == 4 && sword > 0)
+            {
+                validd = 1;
+            }
+            if (cursorr == 5)
+            {
+                validd = 1;
+            }
+        } while (cc != 10 || validd <= 0);
+        clear();
+        // Mace
+        if (cursorr == 0)
+        {
+            Current_Weapon = 'm';
+        }
+        // Dagger
+        if (cursorr == 1)
+        {
+            Current_Weapon = 'D';
+        }
+        // Magic Wand
+        if (cursorr == 2)
+        {
+            Current_Weapon = 'M';
+        }
+        // Normal Arrow
+        if (cursorr == 3)
+        {
+            Current_Weapon = 'N';
+        }
+        // Sword
+        if (cursorr == 4)
+        {
+            Current_Weapon = 'S';
+        }
+        // Back
+        if (cursorr == 5)
+        {
+        }
     }
 }
 
@@ -2144,8 +2635,12 @@ void LoadGame_StairCase()
 
 void AddtoScoreBoard()
 {
-    FILE *file = fopen("ScoreBoard.txt", "a");
-    fprintf(file, "%s\n%d\n",Player_UserName,playerGOLD);
+    FILE *file55 = fopen("ScoreBoard.txt", "a");
+    if (file55 != NULL)
+    {
+        fprintf(file55, "%s\n%d\n", Player_UserName, playerGOLD);
+        fclose(file55);
+    }
 }
 
 void ScoreBoard()
@@ -2166,41 +2661,41 @@ void ScoreBoard()
         }
     }
     fclose(fil);
-    for(int i = 0 ; i < count;i++)
+    for (int i = 0; i < count; i++)
     {
         for (int j = 0; j < count; j++)
         {
-            if(Scores[j] < Scores[i])
+            if (Scores[j] < Scores[i])
             {
                 int temp;
                 temp = Scores[i];
                 Scores[i] = Scores[j];
                 Scores[j] = temp;
                 char Temp[100];
-                strcpy(Temp,UserNames[i]);
-                strcpy(UserNames[i],UserNames[j]);
-                strcpy(UserNames[j],Temp);
+                strcpy(Temp, UserNames[i]);
+                strcpy(UserNames[i], UserNames[j]);
+                strcpy(UserNames[j], Temp);
             }
         }
     }
     curs_set(0);
     wchar_t message[] = L"╔═══════════════════════════════════════════════════╗";
-    mvprintw(1, (cols/2)-20-5, "%ls", message);
+    mvprintw(1, (cols / 2) - 20 - 5, "%ls", message);
     printw("\n");
     wchar_t message1[] = L"║";
-    mvprintw(2, (cols/2)-25, "%ls", message1);
+    mvprintw(2, (cols / 2) - 25, "%ls", message1);
     attron(A_BOLD);
-    mvprintw(2, (cols/2)-4,"ScoreBoard");
+    mvprintw(2, (cols / 2) - 4, "ScoreBoard");
     attroff(A_BOLD);
-    mvprintw(2, (cols/2)+27,"%ls", message1);
+    mvprintw(2, (cols / 2) + 27, "%ls", message1);
     wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
-    mvprintw(3, (cols/2)-25, "%ls", message2);
+    mvprintw(3, (cols / 2) - 25, "%ls", message2);
     refresh();
     attron(A_BOLD | COLOR_PAIR(7));
-    mvprintw(7,(cols/2)-25,"Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
+    mvprintw(7, (cols / 2) - 25, "Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
     attroff(A_BOLD | COLOR_PAIR(7));
     int rowstart = 10;
-    for(int i = 0 ; i < count;i++)
+    for (int i = 0; i < count; i++)
     {
         if (strcmp(UserNames[i], Player_UserName) == 0)
         {
@@ -2213,7 +2708,7 @@ void ScoreBoard()
                 attron(A_BOLD);
             }
         }
-        //Times Played
+        // Times Played
         FILE *file;
         char filename[256];
         snprintf(filename, sizeof(filename), "%s_Times_Played.txt", UserNames[i]);
@@ -2240,7 +2735,6 @@ void ScoreBoard()
         filee = fopen(filename1, "r");
         if (filee == NULL)
         {
-
         }
         else
         {
@@ -2265,13 +2759,13 @@ void ScoreBoard()
             time(&current_time);
             difference = difftime(current_time, file_time);
         }
-        if(i == 0)
+        if (i == 0)
         {
             attron(COLOR_PAIR(4));
             wchar_t message2[] = L"🥇";
-            mvprintw(rowstart+1, (cols/2)-50-1, "%ls", message2);
-            mvprintw(rowstart+1, (cols / 2)-60-1, "GOAT");
-            mvprintw(++rowstart, (cols / 2) - 24-1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i],number, difference);
+            mvprintw(rowstart + 1, (cols / 2) - 50 - 1, "%ls", message2);
+            mvprintw(rowstart + 1, (cols / 2) - 60 - 1, "GOAT");
+            mvprintw(++rowstart, (cols / 2) - 24 - 1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i], number, difference);
             ++rowstart;
             attroff(COLOR_PAIR(4));
         }
@@ -2281,9 +2775,9 @@ void ScoreBoard()
             {
                 attron(COLOR_PAIR(2));
                 wchar_t message2[] = L"🥈";
-                mvprintw(rowstart+1, (cols/2)-40-10-1, "%ls", message2);
-                mvprintw(rowstart+1, (cols / 2)-50-10-1, "LEGEND");
-                mvprintw(++rowstart, (cols / 2) - 14-10-1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i],number, difference);
+                mvprintw(rowstart + 1, (cols / 2) - 40 - 10 - 1, "%ls", message2);
+                mvprintw(rowstart + 1, (cols / 2) - 50 - 10 - 1, "LEGEND");
+                mvprintw(++rowstart, (cols / 2) - 14 - 10 - 1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i], number, difference);
                 ++rowstart;
                 attroff(COLOR_PAIR(2));
             }
@@ -2293,15 +2787,15 @@ void ScoreBoard()
                 {
                     attron(COLOR_PAIR(3));
                     wchar_t message2[] = L"🥉";
-                    mvprintw(rowstart+1, (cols/2)-40-10-1, "%ls", message2);
-                    mvprintw(rowstart+1, (cols / 2)-50-10-1, "GOD");
-                    mvprintw(++rowstart, (cols / 2) - 14-10-1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i],number, difference);
+                    mvprintw(rowstart + 1, (cols / 2) - 40 - 10 - 1, "%ls", message2);
+                    mvprintw(rowstart + 1, (cols / 2) - 50 - 10 - 1, "GOD");
+                    mvprintw(++rowstart, (cols / 2) - 14 - 10 - 1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i], number, difference);
                     ++rowstart;
                     attroff(COLOR_PAIR(3));
                 }
                 else
                 {
-                    mvprintw(++rowstart, (cols / 2) - 14-10-1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i],number, difference);
+                    mvprintw(++rowstart, (cols / 2) - 14 - 10 - 1, "%3d   |    %-8s|   %-6d|        %-8d|   %-4.0f  \n", i + 1, UserNames[i], Scores[i], number, difference);
                     ++rowstart;
                 }
             }
@@ -2317,39 +2811,39 @@ void ScoreBoard()
                 attroff(A_BOLD);
             }
         }
-        if(((i + 1) % 10) == 0 || (i == (count - 1)))
+        if (((i + 1) % 10) == 0 || (i == (count - 1)))
         {
             noecho();
             printw("\n\n\n\n                                                               Press N for next page and P for previous page and q for quit");
             char sd = getch();
-            if(sd == 'N' || sd == 'n')
+            if (sd == 'N' || sd == 'n')
             {
-                if(i != (count - 1))
+                if (i != (count - 1))
                 {
                     rowstart = 10;
                     clear();
                     wchar_t message[] = L"╔═══════════════════════════════════════════════════╗";
-    mvprintw(1, (cols/2)-20-5, "%ls", message);
-    printw("\n");
-    wchar_t message1[] = L"║";
-    mvprintw(2, (cols/2)-25, "%ls", message1);
-    attron(A_BOLD);
-    mvprintw(2, (cols/2)-4,"ScoreBoard");
-    attroff(A_BOLD);
-    mvprintw(2, (cols/2)+27,"%ls", message1);
-    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
-    mvprintw(3, (cols/2)-25, "%ls", message2);
-    refresh();
-    attron(A_BOLD | COLOR_PAIR(7));
-    mvprintw(7,(cols/2)-25,"Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
-    attroff(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(1, (cols / 2) - 20 - 5, "%ls", message);
+                    printw("\n");
+                    wchar_t message1[] = L"║";
+                    mvprintw(2, (cols / 2) - 25, "%ls", message1);
+                    attron(A_BOLD);
+                    mvprintw(2, (cols / 2) - 4, "ScoreBoard");
+                    attroff(A_BOLD);
+                    mvprintw(2, (cols / 2) + 27, "%ls", message1);
+                    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
+                    mvprintw(3, (cols / 2) - 25, "%ls", message2);
+                    refresh();
+                    attron(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(7, (cols / 2) - 25, "Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
+                    attroff(A_BOLD | COLOR_PAIR(7));
                 }
                 else
                 {
                     int j;
-                    for(j = i ; j >= 0 ;j--)
+                    for (j = i; j >= 0; j--)
                     {
-                        if((j + 1) % 10 == 0)
+                        if ((j + 1) % 10 == 0)
                         {
                             break;
                         }
@@ -2358,23 +2852,23 @@ void ScoreBoard()
                     rowstart = 10;
                     clear();
                     wchar_t message[] = L"╔═══════════════════════════════════════════════════╗";
-    mvprintw(1, (cols/2)-20-5, "%ls", message);
-    printw("\n");
-    wchar_t message1[] = L"║";
-    mvprintw(2, (cols/2)-25, "%ls", message1);
-    attron(A_BOLD);
-    mvprintw(2, (cols/2)-4,"ScoreBoard");
-    attroff(A_BOLD);
-    mvprintw(2, (cols/2)+27,"%ls", message1);
-    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
-    mvprintw(3, (cols/2)-25, "%ls", message2);
-    refresh();
-    attron(A_BOLD | COLOR_PAIR(7));
-    mvprintw(7,(cols/2)-25,"Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
-    attroff(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(1, (cols / 2) - 20 - 5, "%ls", message);
+                    printw("\n");
+                    wchar_t message1[] = L"║";
+                    mvprintw(2, (cols / 2) - 25, "%ls", message1);
+                    attron(A_BOLD);
+                    mvprintw(2, (cols / 2) - 4, "ScoreBoard");
+                    attroff(A_BOLD);
+                    mvprintw(2, (cols / 2) + 27, "%ls", message1);
+                    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
+                    mvprintw(3, (cols / 2) - 25, "%ls", message2);
+                    refresh();
+                    attron(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(7, (cols / 2) - 25, "Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
+                    attroff(A_BOLD | COLOR_PAIR(7));
                 }
             }
-            if(sd == 'P' || sd == 'p')
+            if (sd == 'P' || sd == 'p')
             {
                 if (i >= 19)
                 {
@@ -2382,20 +2876,20 @@ void ScoreBoard()
                     rowstart = 10;
                     clear();
                     wchar_t message[] = L"╔═══════════════════════════════════════════════════╗";
-    mvprintw(1, (cols/2)-20-5, "%ls", message);
-    printw("\n");
-    wchar_t message1[] = L"║";
-    mvprintw(2, (cols/2)-25, "%ls", message1);
-    attron(A_BOLD);
-    mvprintw(2, (cols/2)-4,"ScoreBoard");
-    attroff(A_BOLD);
-    mvprintw(2, (cols/2)+27,"%ls", message1);
-    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
-    mvprintw(3, (cols/2)-25, "%ls", message2);
-    refresh();
-    attron(A_BOLD | COLOR_PAIR(7));
-    mvprintw(7,(cols/2)-25,"Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
-    attroff(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(1, (cols / 2) - 20 - 5, "%ls", message);
+                    printw("\n");
+                    wchar_t message1[] = L"║";
+                    mvprintw(2, (cols / 2) - 25, "%ls", message1);
+                    attron(A_BOLD);
+                    mvprintw(2, (cols / 2) - 4, "ScoreBoard");
+                    attroff(A_BOLD);
+                    mvprintw(2, (cols / 2) + 27, "%ls", message1);
+                    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
+                    mvprintw(3, (cols / 2) - 25, "%ls", message2);
+                    refresh();
+                    attron(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(7, (cols / 2) - 25, "Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
+                    attroff(A_BOLD | COLOR_PAIR(7));
                 }
                 else
                 {
@@ -2403,40 +2897,43 @@ void ScoreBoard()
                     rowstart = 10;
                     clear();
                     wchar_t message[] = L"╔═══════════════════════════════════════════════════╗";
-    mvprintw(1, (cols/2)-20-5, "%ls", message);
-    printw("\n");
-    wchar_t message1[] = L"║";
-    mvprintw(2, (cols/2)-25, "%ls", message1);
-    attron(A_BOLD);
-    mvprintw(2, (cols/2)-4,"ScoreBoard");
-    attroff(A_BOLD);
-    mvprintw(2, (cols/2)+27,"%ls", message1);
-    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
-    mvprintw(3, (cols/2)-25, "%ls", message2);
-    refresh();
-    attron(A_BOLD | COLOR_PAIR(7));
-    mvprintw(7,(cols/2)-25,"Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
-    attroff(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(1, (cols / 2) - 20 - 5, "%ls", message);
+                    printw("\n");
+                    wchar_t message1[] = L"║";
+                    mvprintw(2, (cols / 2) - 25, "%ls", message1);
+                    attron(A_BOLD);
+                    mvprintw(2, (cols / 2) - 4, "ScoreBoard");
+                    attroff(A_BOLD);
+                    mvprintw(2, (cols / 2) + 27, "%ls", message1);
+                    wchar_t message2[] = L"╠═══════════════════════════════════════════════════╣";
+                    mvprintw(3, (cols / 2) - 25, "%ls", message2);
+                    refresh();
+                    attron(A_BOLD | COLOR_PAIR(7));
+                    mvprintw(7, (cols / 2) - 25, "Rank  |  UserName  |  Score  |  Games_Played  |  Time\n");
+                    attroff(A_BOLD | COLOR_PAIR(7));
                 }
             }
-            if(sd == 'q')
+            if (sd == 'q')
             {
                 BeforeGame();
             }
         }
     }
-    
+
     char nidaliy = getch();
-    
+
     BeforeGame();
 }
 
 void MakeRoom()
 {
-    /*map = (char **)malloc(2*(rows+1) * sizeof(char *));
-    for (int i = 0; i < 2 * (rows+1); i++)
+    int twd = 0;
+    while(twd == 0)
     {
-        map[i] = (char *)malloc(2*(cols+1) * sizeof(char));
+    /*map = (char **)malloc((rows+1) * sizeof(char *));
+    for (int i = 0; i < rows+1; i++)
+    {
+        map[i] = (char *)malloc((cols+1) * sizeof(char));
     }*/
     srand(time(0));
     // Space top va bottom
@@ -2467,8 +2964,9 @@ void MakeRoom()
     int r_size_x;
     int ry, rx;
     int r_center_x, r_center_y, r_oldcenter_x, r_oldcenter_y;
-    int room_num = (rand() % 5) + 5;
-    if(genone == 0)
+    int room_num = (rand() % 5) + 4;
+
+    if (genone == 0)
     {
         WeaponArray = (Weapon *)malloc(room_num * sizeof(Weapon) * 2);
         WeaponArray[0].mode = 1;
@@ -2477,6 +2975,7 @@ void MakeRoom()
     }
     if (lood == 0)
     {
+    RoomArray = (Room *)malloc(room_num * sizeof(Room) * 2);
         RoomArray = (Room *)malloc(room_num * sizeof(Room) * 2);
         TrapArray = (trap *)malloc(room_num * sizeof(trap));
         DoorArray = (door *)malloc(room_num * sizeof(door) * 3);
@@ -2845,33 +3344,25 @@ void MakeRoom()
             } while ((map[orandomy][orandomx] == 'O') || (map[orandomy][orandomx] == '^') ||
                      (map[orandomy][orandomx] == 'G') || (map[orandomy][orandomx] == '&') || (map[orandomy][orandomx] == 'g'));
             int randomniggro = (rand() % 4) + 2;
+            /*if (randomniggro == 1)
+            {
+                map[orandomy][orandomx] = '1';
+            }*/
             if (randomniggro == 2)
             {
-                {
-                    map[orandomy][orandomx] = '2';
-                    map[orandomy][orandomx] = '2';
-                }
+                map[orandomy][orandomx] = '2';
             }
             if (randomniggro == 3)
             {
-                {
-                    map[orandomy][orandomx] = '3';
-                    map[orandomy][orandomx] = '3';
-                }
+                map[orandomy][orandomx] = '3';
             }
             if (randomniggro == 4)
             {
-                {
-                    map[orandomy][orandomx] = '4';
-                    map[orandomy][orandomx] = '4';
-                }
+                map[orandomy][orandomx] = '4';
             }
             if (randomniggro == 5)
             {
-                {
-                    map[orandomy][orandomx] = '5';
-                    map[orandomy][orandomx] = '5';
-                }
+                map[orandomy][orandomx] = '5';
             }
         }
         // Spell
@@ -2884,7 +3375,7 @@ void MakeRoom()
                 orandomy = (rand() % (RoomArray[index].Height - 4)) + RoomArray[index].TopLeft_Y + 1;
             } while ((map[orandomy][orandomx] == 'O') || (map[orandomy][orandomx] == '^') ||
                      (map[orandomy][orandomx] == 'G') || (map[orandomy][orandomx] == '&') ||
-                     (map[orandomy][orandomx] == 'g') || (map[orandomy][orandomx] == '1') ||
+                     (map[orandomy][orandomx] == 'g') ||
                      (map[orandomy][orandomx] == '2') || (map[orandomy][orandomx] == '3') ||
                      (map[orandomy][orandomx] == '4') || (map[orandomy][orandomx] == '5'));
             int randomniggro = (rand() % 3) + 6;
@@ -2902,8 +3393,8 @@ void MakeRoom()
             }
         }
         // Food
-        yesno = rand() % 3;
-        // yesno = 0;
+        yesno = rand() % 2;
+        yesno = 0;
         if (yesno == 0)
         {
             do
@@ -2912,16 +3403,27 @@ void MakeRoom()
                 orandomy = (rand() % (RoomArray[index].Height - 4)) + RoomArray[index].TopLeft_Y + 1;
             } while ((map[orandomy][orandomx] == 'O') || (map[orandomy][orandomx] == '^') ||
                      (map[orandomy][orandomx] == 'G') || (map[orandomy][orandomx] == '&') ||
-                     (map[orandomy][orandomx] == 'g') || (map[orandomy][orandomx] == '1') ||
+                     (map[orandomy][orandomx] == 'g') ||
                      (map[orandomy][orandomx] == '2') || (map[orandomy][orandomx] == '3') ||
                      (map[orandomy][orandomx] == '4') || (map[orandomy][orandomx] == '5') ||
                      (map[orandomy][orandomx] == '6') || (map[orandomy][orandomx] == '7') ||
                      (map[orandomy][orandomx] == '8'));
             int typefood = rand() % 4;
-            typefood = 0;
             if (typefood == 0)
             {
                 map[orandomy][orandomx] = 'Z';
+            }
+            if (typefood == 1)
+            {
+                map[orandomy][orandomx] = 'X';
+            }
+            if (typefood == 2)
+            {
+                map[orandomy][orandomx] = 'C';
+            }
+            if (typefood == 3)
+            {
+                map[orandomy][orandomx] = 'V';
             }
         }
     }
@@ -2936,11 +3438,12 @@ void MakeRoom()
     } while ((srandomx == x && srandomy == y) || (map[srandomy][srandomx] == 'O') ||
              (map[srandomy][srandomx] == '^') || (map[srandomy][srandomx] == 'G') ||
              (map[srandomy][srandomx] == 'g') || (map[srandomy][srandomx] == '&') ||
-             (map[srandomy][srandomx] == '1') ||
              (map[srandomy][srandomx] == '2') || (map[srandomy][srandomx] == '3') ||
              (map[srandomy][srandomx] == '4') || (map[srandomy][srandomx] == '5') ||
              (map[srandomy][srandomx] == '6') || (map[srandomy][srandomx] == '7') ||
-             (map[srandomy][srandomx] == '8') || (map[srandomy][srandomx] == 'Z'));
+             (map[srandomy][srandomx] == '8') || (map[srandomy][srandomx] == 'Z') ||
+             (map[srandomy][srandomx] == 'X') || (map[srandomy][srandomx] == 'C') ||
+             (map[srandomy][srandomx] == 'V'));
     map[srandomy][srandomx] = '<';
     // Ancient Key
     whichroom = rand() % Room_Placed;
@@ -2952,11 +3455,12 @@ void MakeRoom()
              (map[srandomy][srandomx] == '^') || (map[srandomy][srandomx] == 'G') ||
              (map[srandomy][srandomx] == 'g') || (map[srandomy][srandomx] == '&') ||
              (map[srandomy][srandomx] == '<') ||
-             (map[srandomy][srandomx] == '1') ||
              (map[srandomy][srandomx] == '2') || (map[srandomy][srandomx] == '3') ||
              (map[srandomy][srandomx] == '4') || (map[srandomy][srandomx] == '5') ||
              (map[srandomy][srandomx] == '6') || (map[srandomy][srandomx] == '7') ||
-             (map[srandomy][srandomx] == '8') || (map[srandomy][srandomx] == 'Z'));
+             (map[srandomy][srandomx] == '8') || (map[srandomy][srandomx] == 'Z') ||
+             (map[srandomy][srandomx] == 'X') || (map[srandomy][srandomx] == 'C') ||
+             (map[srandomy][srandomx] == 'V'));
     map[srandomy][srandomx] = 'A';
     // Hiden Door
     if (level != 4)
@@ -3232,10 +3736,13 @@ void MakeRoom()
             }*/
         }
     }
+    // kaboos
     int ref = rand() % (Room_Placed);
     RoomArray[ref].kaboos = 22;
+    twd = 1;
     printw("Press");
     char fgh = getch();
+    }
 }
 
 void Player_Time()
@@ -3248,7 +3755,7 @@ void Player_Time()
     char time_string[100];
 
     file = fopen(filename, "r");
-    if (file != NULL) 
+    if (file != NULL)
     {
         fclose(file);
         return;
@@ -3262,8 +3769,6 @@ void Player_Time()
 
     fprintf(file, "%s\n", time_string);
     fclose(file);
-
-    return;
 }
 
 void load()
@@ -3739,39 +4244,2560 @@ void save()
     exit(0);
 }
 
+void Enemy_gen()
+{
+    EnemyArray = (Enemy *)malloc(sizeof(Enemy) * Room_Placed * 100);
+    for (int i = 0; i < Room_Placed; i++)
+    {
+        int xe;
+        int ye;
+        do
+        {
+            xe = (rand() % RoomArray[i].Width) + RoomArray[i].TopLeft_x;
+            ye = (rand() % RoomArray[i].Height) + RoomArray[i].TopLeft_Y;
+        } while ((map[ye][xe] != ' '));
+        int whih = rand() % 5;
+        if (whih == 0)
+        {
+            EnemyArray[EnemyCount].hp = 5;
+            EnemyArray[EnemyCount].move = 0;
+            EnemyArray[EnemyCount].type = 'd';
+            map[ye][xe] = 'd';
+            EnemyArray[EnemyCount].x = xe;
+            EnemyArray[EnemyCount].y = ye;
+        }
+        if (whih == 1)
+        {
+            EnemyArray[EnemyCount].hp = 10;
+            EnemyArray[EnemyCount].move = 0;
+            EnemyArray[EnemyCount].type = 'f';
+            map[ye][xe] = 'f';
+            EnemyArray[EnemyCount].x = xe;
+            EnemyArray[EnemyCount].y = ye;
+        }
+        if (whih == 2)
+        {
+            EnemyArray[EnemyCount].hp = 15;
+            EnemyArray[EnemyCount].move = 0;
+            EnemyArray[EnemyCount].type = 't';
+            map[ye][xe] = 't';
+            EnemyArray[EnemyCount].x = xe;
+            EnemyArray[EnemyCount].y = ye;
+        }
+        if (whih == 3)
+        {
+            EnemyArray[EnemyCount].hp = 20;
+            EnemyArray[EnemyCount].move = 0;
+            EnemyArray[EnemyCount].type = 's';
+            map[ye][xe] = 's';
+            EnemyArray[EnemyCount].x = xe;
+            EnemyArray[EnemyCount].y = ye;
+        }
+        if (whih == 4)
+        {
+            EnemyArray[EnemyCount].hp = 30;
+            EnemyArray[EnemyCount].move = 0;
+            EnemyArray[EnemyCount].type = 'u';
+            map[ye][xe] = 'u';
+            EnemyArray[EnemyCount].x = xe;
+            EnemyArray[EnemyCount].y = ye;
+        }
+        EnemyCount++;
+    }
+    if (level == 4)
+    {
+        int roomin = -1;
+        for (int i = 0; i < Room_Placed; i++)
+        {
+            int tx = RoomArray[i].TopLeft_x;
+            int txw = RoomArray[i].TopLeft_x + RoomArray[i].Width;
+            for (int j = tx; j < txw; j++)
+            {
+                int ty = RoomArray[i].TopLeft_Y;
+                int tyw = RoomArray[i].TopLeft_Y + RoomArray[i].Height;
+                for (int k = ty; k < tyw; k++)
+                {
+                    if (map[k][j] == '<')
+                    {
+                        roomin = i;
+                        j += 1000;
+                        i += 1000;
+                        break;
+                    }
+                }
+            }
+        }
+        for (int i = RoomArray[roomin].TopLeft_x; i < RoomArray[roomin].TopLeft_x + RoomArray[roomin].Width; i++)
+        {
+            for (int j = RoomArray[roomin].TopLeft_Y; j < RoomArray[roomin].TopLeft_Y + RoomArray[roomin].Height; j++)
+            {
+                if (map[j][i] == ' ')
+                {
+                    int fg = rand() % 3;
+                    if (fg == 2)
+                    {
+                        int whih = rand() % 7;
+                        if (whih == 0)
+                        {
+                            EnemyArray[EnemyCount].hp = 5;
+                            EnemyArray[EnemyCount].move = 0;
+                            EnemyArray[EnemyCount].type = 'd';
+                            map[j][i] = 'd';
+                            EnemyArray[EnemyCount].x = i;
+                            EnemyArray[EnemyCount].y = j;
+                        }
+                        if (whih == 1)
+                        {
+                            EnemyArray[EnemyCount].hp = 10;
+                            EnemyArray[EnemyCount].move = 0;
+                            EnemyArray[EnemyCount].type = 'f';
+                            map[j][i] = 'f';
+                            EnemyArray[EnemyCount].x = i;
+                            EnemyArray[EnemyCount].y = j;
+                        }
+                        if (whih == 2)
+                        {
+                            EnemyArray[EnemyCount].hp = 15;
+                            EnemyArray[EnemyCount].move = 0;
+                            EnemyArray[EnemyCount].type = 't';
+                            map[j][i] = 't';
+                            EnemyArray[EnemyCount].x = i;
+                            EnemyArray[EnemyCount].y = j;
+                        }
+                        if (whih == 3)
+                        {
+                            EnemyArray[EnemyCount].hp = 20;
+                            EnemyArray[EnemyCount].move = 0;
+                            EnemyArray[EnemyCount].type = 's';
+                            map[j][i] = 's';
+                            EnemyArray[EnemyCount].x = i;
+                            EnemyArray[EnemyCount].y = j;
+                        }
+                        if (whih == 4)
+                        {
+                            EnemyArray[EnemyCount].hp = 30;
+                            EnemyArray[EnemyCount].move = 0;
+                            EnemyArray[EnemyCount].type = 'u';
+                            map[j][i] = 'u';
+                            EnemyArray[EnemyCount].x = i;
+                            EnemyArray[EnemyCount].y = j;
+                        }
+                        EnemyCount++;
+                    }
+                }
+            }
+        }
+        /*printw("%d\n",roomin);
+        for(int i = 0 ; i < rows;i++)
+        {
+            printw("%s\n",map[i]);
+        }*/
+    }
+}
+
+void Enemy_Move()
+{
+    for (int i = 0; i < EnemyCount; i++)
+    {
+        if (EnemyArray[i].move == 1 && EnemyArray[i].hp > 0)
+        {
+            //(map[EnemyArray[i].y][EnemyArray[i].x] == 'd' || map[EnemyArray[i].y][EnemyArray[i].x] == 'f' ||
+            // map[EnemyArray[i].y][EnemyArray[i].x] == 't' || map[EnemyArray[i].y][EnemyArray[i].x] == 's' ||
+            // map[EnemyArray[i].y][EnemyArray[i].x] == 'u')
+            if (map[EnemyArray[i].y][EnemyArray[i].x] == 'd' || map[EnemyArray[i].y][EnemyArray[i].x] == 'f' ||
+                map[EnemyArray[i].y][EnemyArray[i].x] == 't' || map[EnemyArray[i].y][EnemyArray[i].x] == 's' ||
+                map[EnemyArray[i].y][EnemyArray[i].x] == 'u')
+            {
+                map[EnemyArray[i].y][EnemyArray[i].x] = ' ';
+            }
+            double distance_up = pow(EnemyArray[i].x - x, 2) + pow(EnemyArray[i].y - 1 - y, 2);
+            double distance_down = pow(EnemyArray[i].x - x, 2) + pow(EnemyArray[i].y + 1 - y, 2);
+            double distance_right = pow(EnemyArray[i].x + 1 - x, 2) + pow(EnemyArray[i].y - y, 2);
+            double distance_left = pow(EnemyArray[i].x - 1 - x, 2) + pow(EnemyArray[i].y - y, 2);
+            double distance_up_right = pow(EnemyArray[i].x + 1 - x, 2) + pow(EnemyArray[i].y - 1 - y, 2);
+            double distance_up_left = pow(EnemyArray[i].x - 1 - x, 2) + pow(EnemyArray[i].y - 1 - y, 2);
+            double distance_down_left = pow(EnemyArray[i].x - 1 - x, 2) + pow(EnemyArray[i].y + 1 - y, 2);
+            double distance_down_right = pow(EnemyArray[i].x + 1 - x, 2) + pow(EnemyArray[i].y + 1 - y, 2);
+            // up
+            if (map[EnemyArray[i].y - 1][EnemyArray[i].x] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'u')
+            {
+            }
+            else
+            {
+                distance_up += 1000;
+            }
+            // down
+            if (map[EnemyArray[i].y + 1][EnemyArray[i].x] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'u')
+            {
+            }
+            else
+            {
+                distance_down += 1000;
+            }
+            // right
+            if (map[EnemyArray[i].y][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_right += 1000;
+            }
+            // left
+            if (map[EnemyArray[i].y][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_left += 1000;
+            }
+            // up right
+            if (map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_up_right += 1000;
+            }
+            // up left
+            if (map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_up_left += 1000;
+            }
+            // down left
+            if (map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_down_left += 1000;
+            }
+            // down right
+            if (map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'u')
+            {
+            }
+            else
+            {
+                distance_down_right += 1000;
+            }
+            // right
+            if (distance_right <= distance_up &&
+                distance_right <= distance_down &&
+                distance_right <= distance_right &&
+                distance_right <= distance_left &&
+                distance_right <= distance_up_right &&
+                distance_right <= distance_up_left &&
+                distance_right <= distance_down_left &&
+                distance_right <= distance_down_right &&
+                map[EnemyArray[i].y][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y][EnemyArray[i].x + 1] != 'u')
+            {
+                if (distance_right == 0)
+                {
+                    strcpy(Line1, "You have been attacked!                                             ");
+                    if (playerHP >= 50)
+                    {
+                        playerHP -= 50;
+                    }
+                    else
+                    {
+                        playerHP = 0;
+                    }
+                    if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                    {
+                        map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                    }
+                }
+                else
+                {
+                    EnemyArray[i].x = EnemyArray[i].x + 1;
+                    if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                    {
+                        map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                    }
+                }
+            }
+            else
+            {
+                // left
+                if (distance_left <= distance_up &&
+                    distance_left <= distance_down &&
+                    distance_left <= distance_left &&
+                    distance_left <= distance_up_right &&
+                    distance_left <= distance_up_left &&
+                    distance_left <= distance_down_left &&
+                    distance_left <= distance_down_right &&
+                    map[EnemyArray[i].y][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y][EnemyArray[i].x - 1] != 'u')
+                {
+                    if (distance_left == 0)
+                    {
+                        strcpy(Line1, "You have been attacked!                                     ");
+                        if (playerHP >= 50)
+                        {
+                            playerHP -= 50;
+                        }
+                        else
+                        {
+                            playerHP = 0;
+                        }
+                        if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                        {
+                            map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                        }
+                    }
+                    else
+                    {
+                        EnemyArray[i].x = EnemyArray[i].x - 1;
+                        if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                        {
+                            map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                        }
+                    }
+                }
+                else
+                {
+                    // up
+                    if (distance_up <= distance_up &&
+                        distance_up <= distance_down &&
+                        distance_up <= distance_up_right &&
+                        distance_up <= distance_up_left &&
+                        distance_up <= distance_down_left &&
+                        distance_up <= distance_down_right &&
+                        map[EnemyArray[i].y - 1][EnemyArray[i].x] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x] != 'u')
+                    {
+                        if (distance_up == 0)
+                        {
+                            strcpy(Line1, "You have been attacked!                       ");
+                            if (playerHP >= 50)
+                            {
+                                playerHP -= 50;
+                            }
+                            else
+                            {
+                                playerHP = 0;
+                            }
+                            if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                            {
+                                map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                            }
+                        }
+                        else
+                        {
+                            EnemyArray[i].y = EnemyArray[i].y - 1;
+                            if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                            {
+                                map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // down
+                        if (distance_down <= distance_down &&
+                            distance_down <= distance_up_right &&
+                            distance_down <= distance_up_left &&
+                            distance_down <= distance_down_left &&
+                            distance_down <= distance_down_right &&
+                            map[EnemyArray[i].y + 1][EnemyArray[i].x] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x] != 'u')
+                        {
+                            if (distance_down == 0)
+                            {
+                                strcpy(Line1, "You have been attacked!                             ");
+                                if (playerHP >= 50)
+                                {
+                                    playerHP -= 50;
+                                }
+                                else
+                                {
+                                    playerHP = 0;
+                                }
+                                if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                {
+                                    map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                }
+                            }
+                            else
+                            {
+                                EnemyArray[i].y = EnemyArray[i].y + 1;
+                                if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                {
+                                    map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // up right
+                            if (distance_up_right <= distance_up_right &&
+                                distance_up_right <= distance_up_left &&
+                                distance_up_right <= distance_down_left &&
+                                distance_up_right <= distance_down_right &&
+                                map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x + 1] != 'u')
+                            {
+                                if (distance_up_right == 0)
+                                {
+                                    strcpy(Line1, "You have been attacked!                               ");
+                                    if (playerHP >= 50)
+                                    {
+                                        playerHP -= 50;
+                                    }
+                                    else
+                                    {
+                                        playerHP = 0;
+                                    }
+                                    if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                    {
+                                        map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                    }
+                                }
+                                else
+                                {
+                                    EnemyArray[i].x = EnemyArray[i].x + 1;
+                                    EnemyArray[i].y = EnemyArray[i].y - 1;
+                                    if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                    {
+                                        map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // up left
+                                if (distance_up_left <= distance_up_left &&
+                                    distance_up_left <= distance_down_left &&
+                                    distance_up_left <= distance_down_right &&
+                                    map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y - 1][EnemyArray[i].x - 1] != 'u')
+                                {
+                                    if (distance_up_left == 0)
+                                    {
+                                        strcpy(Line1, "You have been attacked!                                  ");
+                                        if (playerHP >= 50)
+                                        {
+                                            playerHP -= 50;
+                                        }
+                                        else
+                                        {
+                                            playerHP = 0;
+                                        }
+                                        if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                        {
+                                            map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        EnemyArray[i].x--;
+                                        EnemyArray[i].y--;
+                                        if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                        {
+                                            map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // down left
+                                    if (distance_down_left <= distance_down_left &&
+                                        distance_down_left <= distance_down_right &&
+                                        map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x - 1] != 'u')
+                                    {
+                                        if (distance_down_left == 0)
+                                        {
+                                            strcpy(Line1, "You have been attacked!                               ");
+                                            if (playerHP >= 50)
+                                            {
+                                                playerHP -= 50;
+                                            }
+                                            else
+                                            {
+                                                playerHP = 0;
+                                            }
+                                            if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                            {
+                                                map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            EnemyArray[i].x--;
+                                            EnemyArray[i].y++;
+                                            if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                            {
+                                                map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // down right
+                                        if (distance_down_right <= distance_down_right &&
+                                            map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != '#' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != '%' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'O' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'd' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'f' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 't' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 's' && map[EnemyArray[i].y + 1][EnemyArray[i].x + 1] != 'u')
+                                        {
+                                            if (distance_down_right == 0)
+                                            {
+                                                strcpy(Line1, "You have been attacked!                            ");
+                                                if (playerHP >= 50)
+                                                {
+                                                    playerHP -= 50;
+                                                }
+                                                else
+                                                {
+                                                    playerHP = 0;
+                                                }
+                                                if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                                {
+                                                    map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                EnemyArray[i].y++;
+                                                EnemyArray[i].x++;
+                                                if (map[EnemyArray[i].y][EnemyArray[i].x] == ' ')
+                                                {
+                                                    map[EnemyArray[i].y][EnemyArray[i].x] = EnemyArray[i].type;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Lose()
+{
+    clear();
+    printw("  Y   Y  OOO  U   U     L      OOO  SSSS  TTTTT\n");
+    printw("   Y Y  O   O U   U     L     O   O S       T\n");
+    printw("    Y   O   O U   U     L     O   O  SSS    T\n");
+    printw("    Y   O   O U   U     L     O   O     S   T\n");
+    printw("    Y    OOO   UUU      LLLLL  OOO  SSSS    T\n");
+    char cc = getch();
+    endwin();
+    exit(0);
+}
+
+void Won()
+{
+    clear();
+    printw("  Y   Y  OOO  U   U     W   W   OOO   N   N\n");
+    printw("   Y Y  O   O U   U     W   W  O   O  NN  N\n");
+    printw("    Y   O   O U   U     W W W  O   O  N N N\n");
+    printw("    Y   O   O U   U     WW WW  O   O  N  NN\n");
+    printw("    Y    OOO   UUU      W   W   OOO   N   N\n");
+
+    printw("points: %d", playerGOLD);
+    char cc = getch();
+    endwin();
+    exit(0);
+}
+
+void battle(int yy, int xx)
+{
+    strcpy(Line1, "Fight!                                                                   ");
+    double attack;
+    if (Current_Weapon == 'm')
+    {
+        /*for(int i = 0 ; i < WeaponCount;i++)
+        {
+            if(WeaponArray[i].mode == 1)
+            {
+
+            }
+        }*/
+        attack = 5;
+    }
+    /*if(Current_Weapon == 'D')
+    {
+        for(int i = 0 ; i < WeaponCount;i++)
+        {
+            if(WeaponArray[i].mode == 2)
+            {
+                WeaponArray[i].times_use_left--;
+                break;
+            }
+        }
+        attack = 12;
+    }
+    if(Current_Weapon == 'M')
+    {
+        for(int i = 0 ; i < WeaponCount;i++)
+        {
+            if(WeaponArray[i].mode == 3)
+            {
+                WeaponArray[i].times_use_left--;
+                break;
+            }
+        }
+        attack = 15;
+    }
+    if(Current_Weapon == 'N')
+    {
+        for(int i = 0 ; i < WeaponCount;i++)
+        {
+            if(WeaponArray[i].mode == 4)
+            {
+                WeaponArray[i].times_use_left--;
+                break;
+            }
+        }
+        attack = 5;
+    }*/
+    if (Current_Weapon == 'S')
+    {
+        /*for(int i = 0 ; i < WeaponCount;i++)
+        {
+            if(WeaponArray[i].mode == 5)
+            {
+
+            }
+        }*/
+        attack = 10;
+    }
+    if (Current_Weapon == 'm' || Current_Weapon == 'S')
+    {
+        attack *= power;
+        for (int i = 0; i < EnemyCount; i++)
+        {
+            if (EnemyArray[i].x == xx && EnemyArray[i].y == yy && EnemyArray[i].hp > 0)
+            {
+                if (EnemyArray[i].hp >= attack)
+                {
+                    EnemyArray[i].hp -= attack;
+                    if (EnemyArray[i].hp == 0)
+                    {
+                        strcpy(Line1, "Enemy Killed!");
+                        map[yy][xx] = ' ';
+                    }
+                    if (playerHP >= 50)
+                    {
+                        playerHP -= 50;
+                    }
+                    else
+                    {
+                        playerHP = 0;
+                    }
+                }
+                else
+                {
+                    strcpy(Line1, "Enemy Killed!");
+                    EnemyArray[i].hp = 0;
+                    map[yy][xx] = ' ';
+                    if (playerHP >= 50)
+                    {
+                        playerHP -= 50;
+                    }
+                    else
+                    {
+                        playerHP = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+int Check_Enemy(int yy, int xx)
+{
+    for (int i = 0; i < EnemyCount; i++)
+    {
+        if (EnemyArray[i].x == xx && EnemyArray[i].y == yy && EnemyArray[i].hp > 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void Far_Battle()
+{
+    if (Current_Weapon == 'M')
+    {
+        int attack = 15 * power;
+        int have = 0;
+        for (int i = 0; i < WeaponCount; i++)
+        {
+            if (WeaponArray[i].mode == 3 && WeaponArray[i].times_use_left >= 1)
+            {
+                WeaponArray[i].times_use_left--;
+                have = 1;
+                break;
+            }
+        }
+        if (have == 0)
+        {
+            strcpy(Line1, "You don't have a Weapon!                     ");
+            return;
+        }
+        int cc = getch();
+        if (cc == KEY_UP)
+        {
+            for (int i = y - 1; i >= y - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    EnemyArray[index].move = -1;
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i + 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i + 1;
+                        Wasted_Weapon_Count++;
+                        map[i + 1][x] = '3';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y - 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '3';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_DOWN)
+        {
+            for (int i = y + 1; i <= y + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    EnemyArray[index].move = -1;
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i - 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i - 1;
+                        Wasted_Weapon_Count++;
+                        map[i - 1][x] = '3';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y + 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '3';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_RIGHT)
+        {
+            for (int i = x + 1; i <= x + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    EnemyArray[index].move = -1;
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i - 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i - 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i - 1] = '3';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x + 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '3';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_LEFT)
+        {
+            for (int i = x - 1; i >= x - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    EnemyArray[index].move = -1;
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i + 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i + 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i + 1] = '3';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x - 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '3';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (Current_Weapon == 'D')
+    {
+        int attack = 12 * power;
+        int have = 0;
+        for (int i = 0; i < WeaponCount; i++)
+        {
+            if (WeaponArray[i].mode == 2 && WeaponArray[i].times_use_left >= 1)
+            {
+                WeaponArray[i].times_use_left--;
+                have = 1;
+                break;
+            }
+        }
+        if (have == 0)
+        {
+            strcpy(Line1, "You don't have a Weapon!                     ");
+            return;
+        }
+        int cc = getch();
+        if (cc == KEY_UP)
+        {
+            for (int i = y - 1; i >= y - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i + 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i + 1;
+                        Wasted_Weapon_Count++;
+                        map[i + 1][x] = '2';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y - 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '2';
+                    }
+                }
+            }
+        }
+        if (cc == KEY_DOWN)
+        {
+            for (int i = y + 1; i <= y + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i - 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i - 1;
+                        Wasted_Weapon_Count++;
+                        map[i - 1][x] = '2';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y + 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '2';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_RIGHT)
+        {
+            for (int i = x + 1; i <= x + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i - 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i - 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i - 1] = '2';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x + 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '2';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_LEFT)
+        {
+            for (int i = x - 1; i >= x - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i + 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i + 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i + 1] = '2';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x - 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '2';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (Current_Weapon == 'N')
+    {
+        int attack = 5 * power;
+        int have = 0;
+        for (int i = 0; i < WeaponCount; i++)
+        {
+            if (WeaponArray[i].mode == 4 && WeaponArray[i].times_use_left >= 1)
+            {
+                WeaponArray[i].times_use_left--;
+                have = 1;
+                break;
+            }
+        }
+        if (have == 0)
+        {
+            strcpy(Line1, "You don't have a Weapon!                     ");
+            return;
+        }
+        int cc = getch();
+        if (cc == KEY_UP)
+        {
+            for (int i = y - 1; i >= y - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i + 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i + 1;
+                        Wasted_Weapon_Count++;
+                        map[i + 1][x] = '4';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y - 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '4';
+                    }
+                }
+            }
+        }
+        if (cc == KEY_DOWN)
+        {
+            for (int i = y + 1; i <= y + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(i, x) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == x && EnemyArray[j].y == i && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (i == CorridorArray[k].y && x == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[i][x] = ' ';
+                            }
+                            else
+                            {
+                                map[i][x] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[i][x] == '#' || map[i][x] == 'O' || map[i][x] == '%')
+                {
+                    if (map[i - 1][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i - 1;
+                        Wasted_Weapon_Count++;
+                        map[i - 1][x] = '4';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == y + 5)
+                {
+                    if (map[i][x] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = x;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = i;
+                        Wasted_Weapon_Count++;
+                        map[i][x] = '4';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_RIGHT)
+        {
+            for (int i = x + 1; i <= x + 5; i++)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i - 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i - 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i - 1] = '4';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x + 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '4';
+                        break;
+                    }
+                }
+            }
+        }
+        if (cc == KEY_LEFT)
+        {
+            for (int i = x - 1; i >= x - 5; i--)
+            {
+                // if hit enemy
+                if (Check_Enemy(y, i) == 0)
+                {
+                    strcpy(Line1, "You hit Enemy!                                                        ");
+                    int index = -1;
+                    for (int j = 0; j < EnemyCount; j++)
+                    {
+                        if (EnemyArray[j].x == i && EnemyArray[j].y == y && EnemyArray[j].hp > 0)
+                        {
+                            index = j;
+                            break;
+                        }
+                    }
+                    if (EnemyArray[index].hp >= attack)
+                    {
+                        EnemyArray[index].hp -= attack;
+                        if (EnemyArray[index].hp == 0)
+                        {
+                            strcpy(Line1, "Enemy Killed!                                      ");
+                            int which = 0;
+                            for (int k = 0; k < Corridor_Placed; k++)
+                            {
+                                if (y == CorridorArray[k].y && i == CorridorArray[k].x)
+                                {
+                                    which = 1;
+                                    break;
+                                }
+                            }
+                            if (which == 0)
+                            {
+                                map[y][i] = ' ';
+                            }
+                            else
+                            {
+                                map[y][i] = '$';
+                            }
+                        }
+                    }
+                    else
+                    {
+                        strcpy(Line1, "Enemy Killed!                                                     ");
+                        EnemyArray[index].hp = 0;
+                    }
+                    break;
+                }
+                // if hit wall
+                if (map[y][i] == '#' || map[y][i] == 'O' || map[y][i] == '%')
+                {
+                    if (map[y][i + 1] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i + 1;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i + 1] = '4';
+                        break;
+                    }
+                }
+                // if range is over
+                if (i == x - 5)
+                {
+                    if (map[y][i] != '<')
+                    {
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].x = i;
+                        Wasted_Weapon_Array[Wasted_Weapon_Count].y = y;
+                        Wasted_Weapon_Count++;
+                        map[y][i] = '4';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Telesm_Room()
+{
+    char map2[12][12];
+    for (int i = 0; i < 12; i++)
+    {
+        for (int j = 0; j < 12; j++)
+        {
+            map2[i][j] = ' ';
+        }
+    }
+    trap TRAPS[20];
+    int tpcount = 0;
+    for (int i = 0; i < 12; i++)
+    {
+        map2[0][i] = '#';
+        map2[11][i] = '#';
+        map2[i][0] = '#';
+        map2[i][11] = '#';
+    }
+    int randomx_player = (rand() % 10) + 1;
+    int randomy_player = (rand() % 10) + 1;
+    int randomx;
+    int randomy;
+    for (int bar = 1; bar <= 20; bar++)
+    {
+        do
+        {
+            randomx = (rand() % 10) + 1;
+            randomy = (rand() % 10) + 1;
+        } while ((randomy == randomy_player && randomx == randomx_player) || map2[randomy][randomx] == '^');
+        map2[randomy][randomx] = '^';
+        TRAPS[tpcount].x = randomx;
+        TRAPS[tpcount].y = randomy;
+        TRAPS[tpcount].show = 0;
+        tpcount++;
+    }
+
+    int c = 113;
+    do
+    {
+        // Lose
+        if (playerHP <= 0)
+        {
+            Lose();
+        }
+
+        if (c != 113)
+        {
+            if (MovesTillLastpot == 0)
+            {
+                Health_Pot = 0;
+            }
+            if (power > 1)
+            {
+                if (power - 0.05 >= 1)
+                {
+                    power -= 0.05;
+                }
+                else
+                {
+                    power = 1;
+                }
+            }
+            // Heal food
+            if (PlayerFood > 7)
+            {
+                if (playerHP == playerHPMax)
+                {
+                }
+                else
+                {
+                    if (playerHP <= playerHPMax - 100 - Health_Pot)
+                    {
+                        playerHP += 100 + Health_Pot;
+                    }
+                    else
+                    {
+                        playerHP = playerHPMax;
+                    }
+                    PlayerFood -= 0.5;
+                }
+            }
+            // Pause and Resume Song
+            if (c == 'P' || c == 'p')
+            {
+                Mix_PauseMusic();
+            }
+            if (c == 'r' || c == 'R')
+            {
+                Mix_ResumeMusic();
+            }
+            //
+
+            if (c == 'j' && map2[randomy_player - 1][randomx_player] != '#')
+            {
+                randomy_player--;
+                if (MovesTillLastpot >= 1)
+                {
+                    MovesTillLastpot--;
+                }
+                MovesTillLastFood++;
+                if (MovesTillLastFood > TillLast)
+                {
+                    if (PlayerFood >= 1)
+                    {
+                        PlayerFood--;
+                    }
+                }
+                if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                {
+                    for (int i = 0; i < FoodCount; i++)
+                    {
+                        if (FoodArray[i].type == 0)
+                        {
+                            FoodArray[i].type = 3;
+                            break;
+                        }
+                        if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                        {
+                            FoodArray[i].type = 0;
+                            break;
+                        }
+                    }
+                }
+                if (PlayerFood < 3)
+                {
+                    if (playerHP >= 50)
+                    {
+                        playerHP -= 50;
+                    }
+                }
+            }
+            else
+            {
+                if (c == 'k' && map2[randomy_player + 1][randomx_player] != '#')
+                {
+                    randomy_player++;
+                    MovesTillLastFood++;
+                    if (MovesTillLastpot >= 1)
+                    {
+                        MovesTillLastpot--;
+                    }
+                    if (MovesTillLastFood > TillLast)
+                    {
+                        if (PlayerFood >= 1)
+                        {
+                            PlayerFood--;
+                        }
+                    }
+                    if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                    {
+                        for (int i = 0; i < FoodCount; i++)
+                        {
+                            if (FoodArray[i].type == 0)
+                            {
+                                FoodArray[i].type = 3;
+                                break;
+                            }
+                            if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                            {
+                                FoodArray[i].type = 0;
+                                break;
+                            }
+                        }
+                    }
+                    if (PlayerFood < 3)
+                    {
+                        if (playerHP >= 50)
+                        {
+                            playerHP -= 50;
+                        }
+                    }
+                }
+                else
+                {
+                    if (c == 'l' && map2[randomy_player][randomx_player + 1] != '#')
+                    {
+                        if (MovesTillLastpot >= 1)
+                        {
+                            MovesTillLastpot--;
+                        }
+                        randomx_player++;
+                        MovesTillLastFood++;
+                        if (MovesTillLastFood > TillLast)
+                        {
+                            if (PlayerFood >= 1)
+                            {
+                                PlayerFood--;
+                            }
+                        }
+                        if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                        {
+                            for (int i = 0; i < FoodCount; i++)
+                            {
+                                if (FoodArray[i].type == 0)
+                                {
+                                    FoodArray[i].type = 3;
+                                    break;
+                                }
+                                if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                {
+                                    FoodArray[i].type = 0;
+                                    break;
+                                }
+                            }
+                        }
+                        if (PlayerFood < 3)
+                        {
+                            if (playerHP >= 50)
+                            {
+                                playerHP -= 50;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (c == 'h' && map2[randomy_player][randomx_player - 1] != '#')
+                        {
+                            if (MovesTillLastpot >= 1)
+                            {
+                                MovesTillLastpot--;
+                            }
+                            randomx_player--;
+                            MovesTillLastFood++;
+                            if (MovesTillLastFood > TillLast)
+                            {
+                                if (PlayerFood >= 1)
+                                {
+                                    PlayerFood--;
+                                }
+                            }
+                            if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                            {
+                                for (int i = 0; i < FoodCount; i++)
+                                {
+                                    if (FoodArray[i].type == 0)
+                                    {
+                                        FoodArray[i].type = 3;
+                                        break;
+                                    }
+                                    if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                    {
+                                        FoodArray[i].type = 0;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (PlayerFood < 3)
+                            {
+                                if (playerHP >= 50)
+                                {
+                                    playerHP -= 50;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (c == 'y' && map2[randomy_player - 1][randomx_player - 1] != '#')
+                            {
+                                if (MovesTillLastpot >= 1)
+                                {
+                                    MovesTillLastpot--;
+                                }
+                                randomy_player--;
+                                randomx_player--;
+                                MovesTillLastFood++;
+                                if (MovesTillLastFood > TillLast)
+                                {
+                                    if (PlayerFood >= 1)
+                                    {
+                                        PlayerFood--;
+                                    }
+                                }
+                                if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                {
+                                    for (int i = 0; i < FoodCount; i++)
+                                    {
+                                        if (FoodArray[i].type == 0)
+                                        {
+                                            FoodArray[i].type = 3;
+                                            break;
+                                        }
+                                        if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                        {
+                                            FoodArray[i].type = 0;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (PlayerFood < 3)
+                                {
+                                    if (playerHP >= 50)
+                                    {
+                                        playerHP -= 50;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (c == 'u' && map2[randomy_player - 1][randomx_player + 1] != '#')
+                                {
+                                    if (MovesTillLastpot >= 1)
+                                    {
+                                        MovesTillLastpot--;
+                                    }
+                                    randomy_player--;
+                                    randomx_player++;
+                                    MovesTillLastFood++;
+                                    if (MovesTillLastFood > TillLast)
+                                    {
+                                        if (PlayerFood >= 1)
+                                        {
+                                            PlayerFood--;
+                                        }
+                                    }
+                                    if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                    {
+                                        for (int i = 0; i < FoodCount; i++)
+                                        {
+                                            if (FoodArray[i].type == 0)
+                                            {
+                                                FoodArray[i].type = 3;
+                                                break;
+                                            }
+                                            if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                            {
+                                                FoodArray[i].type = 0;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (PlayerFood < 3)
+                                    {
+                                        if (playerHP >= 50)
+                                        {
+                                            playerHP -= 50;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (c == 'b' && map2[randomy_player + 1][randomx_player - 1] != '#')
+                                    {
+                                        if (MovesTillLastpot >= 1)
+                                        {
+                                            MovesTillLastpot--;
+                                        }
+                                        randomx_player--;
+                                        randomy_player++;
+                                        MovesTillLastFood++;
+                                        if (MovesTillLastFood > TillLast)
+                                        {
+                                            if (PlayerFood >= 1)
+                                            {
+                                                PlayerFood--;
+                                            }
+                                        }
+                                        if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                        {
+                                            for (int i = 0; i < FoodCount; i++)
+                                            {
+                                                if (FoodArray[i].type == 0)
+                                                {
+                                                    FoodArray[i].type = 3;
+                                                    break;
+                                                }
+                                                if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                                {
+                                                    FoodArray[i].type = 0;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (PlayerFood < 3)
+                                        {
+                                            if (playerHP >= 50)
+                                            {
+                                                playerHP -= 50;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (c == 'n' && map2[randomy_player + 1][randomx_player + 1] != '#')
+                                        {
+                                            if (MovesTillLastpot >= 1)
+                                            {
+                                                MovesTillLastpot--;
+                                            }
+                                            randomx_player++;
+                                            randomy_player++;
+                                            MovesTillLastFood++;
+                                            if (MovesTillLastFood > TillLast)
+                                            {
+                                                if (PlayerFood >= 1)
+                                                {
+                                                    PlayerFood--;
+                                                }
+                                            }
+                                            if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                            {
+                                                for (int i = 0; i < FoodCount; i++)
+                                                {
+                                                    if (FoodArray[i].type == 0)
+                                                    {
+                                                        FoodArray[i].type = 3;
+                                                        break;
+                                                    }
+                                                    if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                                    {
+                                                        FoodArray[i].type = 0;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (PlayerFood < 3)
+                                            {
+                                                if (playerHP >= 50)
+                                                {
+                                                    playerHP -= 50;
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (map2[randomy_player][randomx_player] == '^')
+            {
+                int ij;
+                for (ij = 0; ij < tpcount; ij++)
+                {
+                    if (randomy_player == TRAPS[ij].y && randomx_player == TRAPS[ij].x)
+                    {
+                        break;
+                    }
+                }
+                TRAPS[ij].show = 1;
+                if (playerHP >= 100)
+                {
+                    playerHP -= 100;
+                }
+                else
+                {
+                    playerHP = 0;
+                }
+            }
+        }
+
+        // print
+        for (int i = 0; i < 12; i++)
+        {
+            for (int j = 0; j < 12; j++)
+            {
+                if (map2[i][j] == '^')
+                {
+                    int sh = 0;
+                    for (int k = 0; k < tpcount; k++)
+                    {
+                        if (TRAPS[k].x == j && TRAPS[k].y == i)
+                        {
+                            if (TRAPS[k].show == 1)
+                            {
+                                sh = 1;
+                            }
+                            break;
+                        }
+                    }
+                    if (sh == 0)
+                    {
+                        mvaddch(i, j, ' ');
+                    }
+                    else
+                    {
+                        mvaddch(i, j, '^');
+                    }
+                }
+                else
+                {
+                    mvprintw(i, j, "%c", map2[i][j]);
+                }
+            }
+            printw("\n");
+        }
+        // print player
+        mvaddch(randomy_player, randomx_player, '@');
+        wchar_t messag1[] = L"💰";
+        wchar_t messag2[] = L"❤️";
+        wchar_t messag3[] = L"🔑";
+        wchar_t messag4[] = L"🏃";
+        wchar_t messag5[] = L"🍔";
+        wchar_t messag6[] = L"⏫";
+        wchar_t messag7[] = L"🚀";
+        wchar_t messag8[] = L"💪";
+        mvprintw(rows - 2, 0, "                                                                                                                                                                                              ");
+        mvprintw(rows - 2, 0 + 30, "%ls  :", messag2);
+        if (playerHP >= 700)
+        {
+            if (playerHP >= 700 && playerHP < 800)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"##";
+                mvprintw(rows - 2, 20 + 30, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 24 + 30, "%d%%", playerHP / 10);
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+            if (playerHP >= 800 && playerHP < 900)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"####";
+                mvprintw(rows - 2, 20 + 30, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 26 + 30, "%d%%", playerHP / 10);
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+            if (playerHP >= 900 && playerHP <= 1000)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"######";
+                mvprintw(rows - 2, 20 + 30, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 28 + 30, "%d%%", playerHP / 10);
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+        }
+        else
+        {
+            if (playerHP > 300)
+            {
+                if (playerHP > 300 && playerHP < 400)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"##";
+                    mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 16 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (playerHP >= 400 && playerHP < 500)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"####";
+                    mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 18 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (playerHP >= 500 && playerHP < 600)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"######";
+                    mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 20 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (playerHP >= 600 && playerHP < 700)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"########";
+                    mvprintw(rows - 2, 12 + 30, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 22 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+            }
+            else
+            {
+                if (playerHP > 0 && playerHP < 100)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"##";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 10 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (playerHP >= 100 && playerHP < 200)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"####";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 12 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (playerHP >= 200 && playerHP <= 300)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 14 + 30, "%d%%", playerHP / 10);
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+            }
+        }
+        //
+        mvprintw(rows - 2, 0 + 30 + 50 + 50 - 10, "%ls  :", messag5);
+        if (PlayerFood >= 7)
+        {
+            if (PlayerFood >= 7 && PlayerFood < 8)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30 + 50 + 50 - 10, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30 + 50 + 50 - 10, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"##";
+                mvprintw(rows - 2, 20 + 30 + 50 + 50 - 10, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 24 + 30 + 50 + 50 - 10, "%d%%", (int)(PlayerFood * 10));
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+            if (PlayerFood >= 8 && PlayerFood < 9)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30 + 50 + 50 - 10, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30 + 50 + 50 - 10, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"####";
+                mvprintw(rows - 2, 20 + 30 + 50 + 50 - 10, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 26 + 30 + 50 + 50 - 10, "%d%%", (int)(PlayerFood * 10));
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+            if (PlayerFood >= 9 && PlayerFood <= 10)
+            {
+                attron(COLOR_PAIR(5));
+                wchar_t messag9[] = L"######";
+                mvprintw(rows - 2, 6 + 30 + 50 + 50 - 10, "%ls", messag9);
+                attroff(COLOR_PAIR(5));
+                attron(COLOR_PAIR(7));
+                wchar_t messag10[] = L"########";
+                mvprintw(rows - 2, 12 + 30 + 50 + 50 - 10, "%ls", messag10);
+                attroff(COLOR_PAIR(7));
+                attron(COLOR_PAIR(2));
+                wchar_t messag11[] = L"######";
+                mvprintw(rows - 2, 20 + 30 + 50 + 50 - 10, "%ls", messag11);
+                attroff(COLOR_PAIR(2));
+                attron(COLOR_PAIR(1) | A_BOLD);
+                mvprintw(rows - 2, 28 + 30 + 50 + 50 - 10, "%d%%", (int)(PlayerFood * 10));
+                attroff(COLOR_PAIR(1) | A_BOLD);
+            }
+        }
+        else
+        {
+            if (PlayerFood > 3)
+            {
+                if (PlayerFood > 3 && PlayerFood < 4)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"##";
+                    mvprintw(rows - 2, 12 + 30 + 100 - 10, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 16 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (PlayerFood >= 4 && PlayerFood < 5)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"####";
+                    mvprintw(rows - 2, 12 + 30 + 100 - 10, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 18 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (PlayerFood >= 5 && PlayerFood < 6)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"######";
+                    mvprintw(rows - 2, 12 + 30 + 100 - 10, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 20 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (PlayerFood >= 6 && PlayerFood < 7)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(7));
+                    wchar_t messag10[] = L"########";
+                    mvprintw(rows - 2, 12 + 30 + 100 - 10, "%ls", messag10);
+                    attroff(COLOR_PAIR(7));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 22 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+            }
+            else
+            {
+                if (PlayerFood > 0 && PlayerFood < 1)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"##";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 10 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (PlayerFood >= 1 && PlayerFood < 2)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"####";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 12 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+                if (PlayerFood >= 2 && PlayerFood <= 3)
+                {
+                    attron(COLOR_PAIR(5));
+                    wchar_t messag9[] = L"######";
+                    mvprintw(rows - 2, 6 + 30 + 100 - 10, "%ls", messag9);
+                    attroff(COLOR_PAIR(5));
+                    attron(COLOR_PAIR(1) | A_BOLD);
+                    mvprintw(rows - 2, 14 + 30 + 100 - 10, "%d%%", (int)(PlayerFood * 10));
+                    attroff(COLOR_PAIR(1) | A_BOLD);
+                }
+            }
+        }
+        //
+        mvprintw(rows, 0, "%ls  %d                                                                             %ls  %d     %ls  %d                                                                             %ls  %d",
+                 messag1, playerGOLD, messag3, AncientKeys - UsedKey, messag4, MovesTillLastFood, messag6, level);
+        attron(A_BLINK);
+        mvprintw(rows - 10, 0, "Press Any Key to Continue!");
+        attroff(A_BLINK);
+        refresh();
+        // Lose
+        if (playerHP <= 0)
+        {
+            Lose();
+        }
+    } while ((c = getch()) != 27);
+}
+
+void Inventory()
+{
+
+}
+
 struct timeval start, end;
 int MakeGame(int c)
 {
-    //Generate Map
+    // bug fix spped
+    if (speed <= 0)
+    {
+        speed = 0;
+    }
+    // Generate Map
     if (Room_Placed == 0)
     {
         clear();
         MakeRoom();
     }
-    //Pause and Resume Song
-    if(c == 'P' || c == 'p')
+    // New Room message
+    if (c == 113)
+    {
+        strcpy(Line1, "New Level!");
+        Enemy_gen();
+    }
+    // Pot_Health Effect
+    if (MovesTillLastpot == 0)
+    {
+        Health_Pot = 0;
+    }
+    if (power > 1)
+    {
+        if (power - 0.05 >= 1)
+        {
+            power -= 0.05;
+        }
+        else
+        {
+            power = 1;
+        }
+    }
+    // Heal food
+    if (1)
+    {
+        if (PlayerFood > 7)
+        {
+            if (playerHP == playerHPMax)
+            {
+            }
+            else
+            {
+                if (playerHP <= playerHPMax - 100 - Health_Pot)
+                {
+                    playerHP += 100 + Health_Pot;
+                }
+                else
+                {
+                    playerHP = playerHPMax;
+                }
+                PlayerFood -= 0.5;
+            }
+        }
+    }
+    // Pause and Resume Song
+    if (c == 'P' || c == 'p')
     {
         Mix_PauseMusic();
     }
-    if(c == 'r' || c == 'R')
+    if (c == 'r' || c == 'R')
     {
         Mix_ResumeMusic();
     }
-    
-    //New Room message
-    if(c == 113)
-    {
-        strcpy(Line1,"New Level!");
-    }
-    
-    //Empty PassWord
+    // Empty PassWord
     gettimeofday(&end, NULL);
     if ((int)(end.tv_sec - start.tv_sec) > 10)
     {
-        strcpy(Line2,"                                                       ");
+        strcpy(Line2, "                                                       ");
     }
-
-    
+    // Lose
+    if (playerHP <= 0)
+    {
+        Lose();
+    }
+    // Farrange Fight
+    if (c == ' ')
+    {
+        Far_Battle();
+    }
+    //Inventory
+    /*if(c == 'G' || c == 'g')
+    {
+        Inventory();
+    }*/
     // locked door
     int lockeddooryesno = 0;
     int keypass = 0;
@@ -3954,90 +6980,144 @@ int MakeGame(int c)
             break;
         }
     }
-    
-    // movement
-    if(c == 'F' || c == 'f')
+    if (1)
     {
-        char cc = getch();
-        if(cc == 'w')
+        // Battle 1-1
+        if (c == 'j' && Check_Enemy(y - 1, x) == 0)
         {
-            for(int i = y;i >=2;i--)
+            battle(y - 1, x);
+        }
+        else
+        {
+            if (c == 'k' && Check_Enemy(y + 1, x) == 0)
             {
-                if(map[i][x] == ' ' && map[i-1][x] != ' ')
+                battle(y + 1, x);
+            }
+            else
+            {
+                if (c == 'l' && Check_Enemy(y, x + 1) == 0)
                 {
-                    y = i;
-                    break;
-                    //return;
+                    battle(y, x + 1);
+                }
+                else
+                {
+                    if (c == 'h' && Check_Enemy(y, x - 1) == 0)
+                    {
+                        battle(y, x - 1);
+                    }
+                    else
+                    {
+                        if (c == 'y' && Check_Enemy(y - 1, x - 1) == 0)
+                        {
+                            battle(y - 1, x - 1);
+                        }
+                        else
+                        {
+                            if (c == 'u' && Check_Enemy(y - 1, x + 1) == 0)
+                            {
+                                battle(y - 1, x + 1);
+                            }
+                            else
+                            {
+                                if (c == 'b' && Check_Enemy(y + 1, x - 1) == 0)
+                                {
+                                    battle(y + 1, x - 1);
+                                }
+                                else
+                                {
+                                    if (c == 'n' && Check_Enemy(y + 1, x + 1) == 0)
+                                    {
+                                        battle(y + 1, x + 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-        if(cc == 's')
+        // Movement
+        if (c == 'F' || c == 'f')
         {
-            for(int i = y;i <= rows - 3;i++)
+            char cc = getch();
+            if (cc == 'w')
             {
-                if(map[i][x] == ' ' && map[i+1][x] != ' ')
+                for (int i = y; i >= 2; i--)
                 {
-                    y = i;
-                    break;
-                    //return;
+                    if ((map[i][x] == ' ' && map[i - 1][x] != ' ') && map[i - 1][x] != 'd' && map[i - 1][x] != 'f' && map[i - 1][x] != 't' && map[i - 1][x] != 's' && map[i - 1][x] != 'u')
+                    {
+                        y = i;
+                        break;
+                        // return;
+                    }
+                }
+            }
+            if (cc == 's')
+            {
+                for (int i = y; i <= rows - 3; i++)
+                {
+                    if ((map[i][x] == ' ' && map[i + 1][x] != ' ') && map[i + 1][x] != 'd' && map[i + 1][x] != 'f' && map[i + 1][x] != 't' && map[i + 1][x] != 's' && map[i + 1][x] != 'u')
+                    {
+                        y = i;
+                        break;
+                        // return;
+                    }
+                }
+            }
+            if (cc == 'd')
+            {
+                for (int i = x; i <= cols - 3; i++)
+                {
+                    if ((map[y][i] == ' ' && map[y][i + 1] != ' ') && map[y][i+1] != 'd' && map[y][i+1] != 'f' && map[y][i+1] != 't' && map[y][i+1] != 's' && map[y][i+1] != 'u')
+                    {
+                        x = i;
+                        break;
+                        // return;
+                    }
+                }
+            }
+            if (cc == 'a')
+            {
+                for (int i = x; i >= 2; i--)
+                {
+                    if ((map[y][i] == ' ' && map[y][i - 1] != ' ') && map[y][i-1] != 'd' && map[y][i-1] != 'f' && map[y][i-1] != 't' && map[y][i-1] != 's' && map[y][i-1] != 'u')
+                    {
+                        x = i;
+                        break;
+                        // return;
+                    }
                 }
             }
         }
-        if(cc == 'd')
+        if (c == 'j' && map[y - 1][x] != '#' && map[y - 1][x] != '%' && map[y - 1][x] != 'O' && Check_Enemy(y - 1, x) == 1 && lockeddooryesno == 0)
         {
-            for(int i = x;i <= cols - 3;i++)
+            y--;
+            if (MovesTillLastpot >= 1)
             {
-                if(map[y][i] == ' ' && map[y][i+1] != ' ')
-                {
-                    x = i;
-                    break;
-                    //return;
-                }
+                MovesTillLastpot--;
             }
-        }
-        if(cc == 'a')
-        {
-            for(int i = x;i >= 2;i--)
-            {
-                if(map[y][i] == ' ' && map[y][i-1] != ' ')
-                {
-                    x = i;
-                    break;
-                    //return;
-                }
-            }
-        }
-    }
-    if (c == 'j' && map[y - 1][x] != '#' && map[y - 1][x] != '%' && map[y - 1][x] != 'O' && lockeddooryesno == 0)
-    {
-        y--;
-        MovesTillLastFood++;
-        if (MovesTillLastFood > TillLast)
-        {
-            if (PlayerFood >= 1)
-            {
-                PlayerFood--;
-            }
-        }
-        if (PlayerFood < 3)
-        {
-            if(playerHP >= 50)
-            {
-                playerHP -= 50;
-            }
-        }
-    }
-    else
-    {
-        if (c == 'k' && map[y + 1][x] != '#' && map[y + 1][x] != '%' && map[y + 1][x] != 'O' && lockeddooryesno == 0)
-        {
-            y++;
             MovesTillLastFood++;
             if (MovesTillLastFood > TillLast)
             {
                 if (PlayerFood >= 1)
                 {
                     PlayerFood--;
+                }
+            }
+            if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+            {
+                for (int i = 0; i < FoodCount; i++)
+                {
+                    if (FoodArray[i].type == 0)
+                    {
+                        FoodArray[i].type = 3;
+                        break;
+                    }
+                    if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                    {
+                        FoodArray[i].type = 0;
+                        break;
+                    }
                 }
             }
             if (PlayerFood < 3)
@@ -4050,15 +7130,35 @@ int MakeGame(int c)
         }
         else
         {
-            if (c == 'l' && map[y][x + 1] != '#' && map[y][x + 1] != '%' && map[y][x + 1] != 'O' && lockeddooryesno == 0)
+            if (c == 'k' && map[y + 1][x] != '#' && map[y + 1][x] != '%' && map[y + 1][x] != 'O' && Check_Enemy(y + 1, x) == 1 && lockeddooryesno == 0)
             {
-                x++;
+                y++;
                 MovesTillLastFood++;
+                if (MovesTillLastpot >= 1)
+                {
+                    MovesTillLastpot--;
+                }
                 if (MovesTillLastFood > TillLast)
                 {
                     if (PlayerFood >= 1)
                     {
                         PlayerFood--;
+                    }
+                }
+                if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                {
+                    for (int i = 0; i < FoodCount; i++)
+                    {
+                        if (FoodArray[i].type == 0)
+                        {
+                            FoodArray[i].type = 3;
+                            break;
+                        }
+                        if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                        {
+                            FoodArray[i].type = 0;
+                            break;
+                        }
                     }
                 }
                 if (PlayerFood < 3)
@@ -4071,15 +7171,35 @@ int MakeGame(int c)
             }
             else
             {
-                if (c == 'h' && map[y][x - 1] != '#' && map[y][x - 1] != '%' && map[y][x - 1] != 'O' && lockeddooryesno == 0)
+                if (c == 'l' && map[y][x + 1] != '#' && map[y][x + 1] != '%' && map[y][x + 1] != 'O' && Check_Enemy(y, x + 1) == 1 && lockeddooryesno == 0)
                 {
-                    x--;
+                    if (MovesTillLastpot >= 1)
+                    {
+                        MovesTillLastpot--;
+                    }
+                    x++;
                     MovesTillLastFood++;
                     if (MovesTillLastFood > TillLast)
                     {
                         if (PlayerFood >= 1)
                         {
                             PlayerFood--;
+                        }
+                    }
+                    if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                    {
+                        for (int i = 0; i < FoodCount; i++)
+                        {
+                            if (FoodArray[i].type == 0)
+                            {
+                                FoodArray[i].type = 3;
+                                break;
+                            }
+                            if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                            {
+                                FoodArray[i].type = 0;
+                                break;
+                            }
                         }
                     }
                     if (PlayerFood < 3)
@@ -4092,9 +7212,12 @@ int MakeGame(int c)
                 }
                 else
                 {
-                    if (c == 'y' && map[y - 1][x - 1] != '#' && map[y - 1][x - 1] != '%' && map[y - 1][x - 1] != 'O' && lockeddooryesno == 0)
+                    if (c == 'h' && map[y][x - 1] != '#' && map[y][x - 1] != '%' && map[y][x - 1] != 'O' && Check_Enemy(y, x - 1) == 1 && lockeddooryesno == 0)
                     {
-                        y--;
+                        if (MovesTillLastpot >= 1)
+                        {
+                            MovesTillLastpot--;
+                        }
                         x--;
                         MovesTillLastFood++;
                         if (MovesTillLastFood > TillLast)
@@ -4102,6 +7225,22 @@ int MakeGame(int c)
                             if (PlayerFood >= 1)
                             {
                                 PlayerFood--;
+                            }
+                        }
+                        if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                        {
+                            for (int i = 0; i < FoodCount; i++)
+                            {
+                                if (FoodArray[i].type == 0)
+                                {
+                                    FoodArray[i].type = 3;
+                                    break;
+                                }
+                                if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                {
+                                    FoodArray[i].type = 0;
+                                    break;
+                                }
                             }
                         }
                         if (PlayerFood < 3)
@@ -4114,16 +7253,36 @@ int MakeGame(int c)
                     }
                     else
                     {
-                        if (c == 'u' && map[y - 1][x + 1] != '#' && map[y - 1][x + 1] != '%' && map[y - 1][x + 1] != 'O' && lockeddooryesno == 0)
+                        if (c == 'y' && map[y - 1][x - 1] != '#' && map[y - 1][x - 1] != '%' && map[y - 1][x - 1] != 'O' && Check_Enemy(y - 1, x - 1) == 1 && lockeddooryesno == 0)
                         {
+                            if (MovesTillLastpot >= 1)
+                            {
+                                MovesTillLastpot--;
+                            }
                             y--;
-                            x++;
+                            x--;
                             MovesTillLastFood++;
                             if (MovesTillLastFood > TillLast)
                             {
                                 if (PlayerFood >= 1)
                                 {
                                     PlayerFood--;
+                                }
+                            }
+                            if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                            {
+                                for (int i = 0; i < FoodCount; i++)
+                                {
+                                    if (FoodArray[i].type == 0)
+                                    {
+                                        FoodArray[i].type = 3;
+                                        break;
+                                    }
+                                    if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                    {
+                                        FoodArray[i].type = 0;
+                                        break;
+                                    }
                                 }
                             }
                             if (PlayerFood < 3)
@@ -4136,16 +7295,36 @@ int MakeGame(int c)
                         }
                         else
                         {
-                            if (c == 'b' && map[y + 1][x - 1] != '#' && map[y + 1][x - 1] != '%' && map[y + 1][x - 1] != 'O' && lockeddooryesno == 0)
+                            if (c == 'u' && map[y - 1][x + 1] != '#' && map[y - 1][x + 1] != '%' && map[y - 1][x + 1] != 'O' && Check_Enemy(y - 1, x + 1) == 1 && lockeddooryesno == 0)
                             {
-                                x--;
-                                y++;
+                                if (MovesTillLastpot >= 1)
+                                {
+                                    MovesTillLastpot--;
+                                }
+                                y--;
+                                x++;
                                 MovesTillLastFood++;
                                 if (MovesTillLastFood > TillLast)
                                 {
                                     if (PlayerFood >= 1)
                                     {
                                         PlayerFood--;
+                                    }
+                                }
+                                if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                {
+                                    for (int i = 0; i < FoodCount; i++)
+                                    {
+                                        if (FoodArray[i].type == 0)
+                                        {
+                                            FoodArray[i].type = 3;
+                                            break;
+                                        }
+                                        if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                        {
+                                            FoodArray[i].type = 0;
+                                            break;
+                                        }
                                     }
                                 }
                                 if (PlayerFood < 3)
@@ -4158,9 +7337,13 @@ int MakeGame(int c)
                             }
                             else
                             {
-                                if (c == 'n' && map[y + 1][x + 1] != '#' && map[y + 1][x + 1] != '%' && map[y + 1][x + 1] != 'O' && lockeddooryesno == 0)
+                                if (c == 'b' && map[y + 1][x - 1] != '#' && map[y + 1][x - 1] != '%' && map[y + 1][x - 1] != 'O' && Check_Enemy(y + 1, x - 1) == 1 && lockeddooryesno == 0)
                                 {
-                                    x++;
+                                    if (MovesTillLastpot >= 1)
+                                    {
+                                        MovesTillLastpot--;
+                                    }
+                                    x--;
                                     y++;
                                     MovesTillLastFood++;
                                     if (MovesTillLastFood > TillLast)
@@ -4168,6 +7351,22 @@ int MakeGame(int c)
                                         if (PlayerFood >= 1)
                                         {
                                             PlayerFood--;
+                                        }
+                                    }
+                                    if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                    {
+                                        for (int i = 0; i < FoodCount; i++)
+                                        {
+                                            if (FoodArray[i].type == 0)
+                                            {
+                                                FoodArray[i].type = 3;
+                                                break;
+                                            }
+                                            if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                            {
+                                                FoodArray[i].type = 0;
+                                                break;
+                                            }
                                         }
                                     }
                                     if (PlayerFood < 3)
@@ -4180,55 +7379,94 @@ int MakeGame(int c)
                                 }
                                 else
                                 {
-                                    if (firsttime == true)
+                                    if (c == 'n' && map[y + 1][x + 1] != '#' && map[y + 1][x + 1] != '%' && map[y + 1][x + 1] != 'O' && Check_Enemy(y + 1, x + 1) == 1 && lockeddooryesno == 0)
                                     {
+                                        if (MovesTillLastpot >= 1)
+                                        {
+                                            MovesTillLastpot--;
+                                        }
+                                        x++;
+                                        y++;
+                                        MovesTillLastFood++;
+                                        if (MovesTillLastFood > TillLast)
+                                        {
+                                            if (PlayerFood >= 1)
+                                            {
+                                                PlayerFood--;
+                                            }
+                                        }
+                                        if (MovesTillLastFood % (TillLast + 20) > TillLast + 19)
+                                        {
+                                            for (int i = 0; i < FoodCount; i++)
+                                            {
+                                                if (FoodArray[i].type == 0)
+                                                {
+                                                    FoodArray[i].type = 3;
+                                                    break;
+                                                }
+                                                if (FoodArray[i].type == 1 || FoodArray[i].type == 2)
+                                                {
+                                                    FoodArray[i].type = 0;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (PlayerFood < 3)
+                                        {
+                                            if (playerHP >= 50)
+                                            {
+                                                playerHP -= 50;
+                                            }
+                                        }
                                     }
                                     else
                                     {
-                                        for (int i = 0; i < Window_Placed; i++)
+                                        if (firsttime == true)
                                         {
-                                            if ((WindowArray[i].x == x && WindowArray[i].y == y) ||
-                                                (WindowArray[i].x == x - 1 && WindowArray[i].y == y) ||
-                                                (WindowArray[i].x == x + 1 && WindowArray[i].y == y) ||
-                                                (WindowArray[i].x == x && WindowArray[i].y == y + 1) ||
-                                                (WindowArray[i].x == x && WindowArray[i].y == y - 1))
+                                        }
+                                        else
+                                        {
+                                            for (int i = 0; i < Window_Placed; i++)
                                             {
-                                                for (int j = 0; j < Room_Placed; j++)
+                                                if ((WindowArray[i].x == x && WindowArray[i].y == y) ||
+                                                    (WindowArray[i].x == x - 1 && WindowArray[i].y == y) ||
+                                                    (WindowArray[i].x == x + 1 && WindowArray[i].y == y) ||
+                                                    (WindowArray[i].x == x && WindowArray[i].y == y + 1) ||
+                                                    (WindowArray[i].x == x && WindowArray[i].y == y - 1))
                                                 {
-                                                    if (WindowArray[i].dir == 0)
+                                                    for (int j = 0; j < Room_Placed; j++)
                                                     {
-                                                        if (RoomArray[j].TopLeft_Y < WindowArray[i].y)
+                                                        if (WindowArray[i].dir == 0)
                                                         {
-                                                            RoomArray[j].wdow = 2;
+                                                            if (RoomArray[j].TopLeft_Y < WindowArray[i].y)
+                                                            {
+                                                                RoomArray[j].wdow = 2;
+                                                            }
                                                         }
-                                                    }
-                                                    if (WindowArray[i].dir == 1)
-                                                    {
-                                                        if (RoomArray[j].TopLeft_x > WindowArray[i].x)
+                                                        if (WindowArray[i].dir == 1)
                                                         {
-                                                            RoomArray[j].wdow = 2;
+                                                            if (RoomArray[j].TopLeft_x > WindowArray[i].x)
+                                                            {
+                                                                RoomArray[j].wdow = 2;
+                                                            }
                                                         }
-                                                    }
-                                                    if (WindowArray[i].dir == 2)
-                                                    {
-                                                        if (RoomArray[j].TopLeft_Y > WindowArray[i].y)
+                                                        if (WindowArray[i].dir == 2)
                                                         {
-                                                            RoomArray[j].wdow = 2;
+                                                            if (RoomArray[j].TopLeft_Y > WindowArray[i].y)
+                                                            {
+                                                                RoomArray[j].wdow = 2;
+                                                            }
                                                         }
-                                                    }
-                                                    if (WindowArray[i].dir == 3)
-                                                    {
-                                                        if (RoomArray[j].TopLeft_x < WindowArray[i].x)
+                                                        if (WindowArray[i].dir == 3)
                                                         {
-                                                            RoomArray[j].wdow = 2;
+                                                            if (RoomArray[j].TopLeft_x < WindowArray[i].x)
+                                                            {
+                                                                RoomArray[j].wdow = 2;
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                        if(c != 113)
-                                        {
-                                            strcpy(Line1,"You cant move through!");
                                         }
                                     }
                                 }
@@ -4239,47 +7477,25 @@ int MakeGame(int c)
             }
         }
     }
-    
-    //Save
-    if(c == '`')
+    // Diactivate enemys in rooms that are not visited yet
+    for (int i = 0; i < Room_Placed; i++)
     {
-        save();
-    }
-    //StairCase
-    if (map[y][x] == '<')
-    {
-        if (c == KEY_LEFT && level != 4)
+        if (RoomArray[i].show == false)
         {
-            SaveGame_StairCase();
-        }
-        if (c == KEY_LEFT && level == 4)
-        {
-            int number;
-            AddtoScoreBoard();
-            FILE *file;
-            char filename[256];
-            snprintf(filename, sizeof(filename), "%s_Times_Played.txt", Player_UserName);
-            file = fopen(filename, "r+");
-
-            fscanf(file, "%d", &number);
-
-            number += 1;
-
-            rewind(file);
-
-            fprintf(file, "%d", number);
-            fclose(file);
-            Player_Time();
-            clear();
-            endwin();
-            exit(0);
-        }
-        if(c == KEY_RIGHT && level != 1)
-        {
-            LoadGame_StairCase();
+            for (int j = 0; j < EnemyCount; j++)
+            {
+                if (EnemyArray[j].y >= RoomArray[i].TopLeft_Y && EnemyArray[j].y <= RoomArray[i].TopLeft_Y + RoomArray[i].Height - 1 &&
+                    EnemyArray[j].x >= RoomArray[i].TopLeft_x && EnemyArray[j].x <= RoomArray[i].TopLeft_x + RoomArray[i].Width - 1)
+                {
+                    if (EnemyArray[j].hp > 0 && EnemyArray[j].move != -1)
+                    {
+                        EnemyArray[j].move = 0;
+                    }
+                }
+            }
         }
     }
-    // step on door(show room)
+    // step on door(show room) and Diactivate Enemy if we step on door
     for (int index = 0; index < Door_Placed; index++)
     {
         if (y == DoorArray[index].y && x == DoorArray[index].x)
@@ -4296,6 +7512,80 @@ int MakeGame(int c)
                     RoomArray[i].show = true;
                 }
             }
+            for (int j = 0; j < EnemyCount; j++)
+            {
+                if (EnemyArray[j].type == 'd' || EnemyArray[j].type == 'f')
+                {
+                    EnemyArray[j].move = 0;
+                }
+            }
+        }
+    }  
+    // Activate Enemy in the room we are in
+    for (int i = 0; i < Room_Placed; i++)
+    {
+        if (y >= RoomArray[i].TopLeft_Y && y <= RoomArray[i].TopLeft_Y + RoomArray[i].Height - 1 &&
+            x >= RoomArray[i].TopLeft_x && x <= RoomArray[i].TopLeft_x + RoomArray[i].Width - 1)
+        {
+            for (int j = 0; j < EnemyCount; j++)
+            {
+                if (EnemyArray[j].y >= RoomArray[i].TopLeft_Y && EnemyArray[j].y <= RoomArray[i].TopLeft_Y + RoomArray[i].Height - 1 &&
+                    EnemyArray[j].x >= RoomArray[i].TopLeft_x && EnemyArray[j].x <= RoomArray[i].TopLeft_x + RoomArray[i].Width - 1)
+                {
+                    if (EnemyArray[j].hp > 0 && EnemyArray[j].move != -1)
+                    {
+                        EnemyArray[j].move = 1;
+                    }
+                }
+            }
+        }
+    }
+    // Enemy Move
+    if (speed == 0 || ((int)(speed * 10)) % 2 == 1)
+    {
+        if (c == 'M' || c == 'm' || c == 'R' || c == 'r' || c == 'P' || c == 'p')
+        {
+        }
+        else
+        {
+            Enemy_Move();
+        }
+    }
+    // Save
+    if (c == '`')
+    {
+        save();
+    }
+    // StairCase
+    if (map[y][x] == '<')
+    {
+        if (c == KEY_LEFT && level != 4)
+        {
+            SaveGame_StairCase();
+        }
+        if (c == KEY_LEFT && level == 4)
+        {
+            int number;
+            AddtoScoreBoard();
+            FILE *file26;
+            char filename[256];
+            snprintf(filename, sizeof(filename), "%s_Times_Played.txt", Player_UserName);
+            file26 = fopen(filename, "r+");
+
+            fscanf(file26, "%d", &number);
+
+            number += 1;
+
+            rewind(file26);
+
+            fprintf(file26, "%d", number);
+            fclose(file26);
+            Player_Time();
+            Won();
+        }
+        if (c == KEY_RIGHT && level != 1)
+        {
+            LoadGame_StairCase();
         }
     }
     // step on trap
@@ -4311,7 +7601,7 @@ int MakeGame(int c)
             }
         }
         TrapArray[ij].show = 1;
-        if(playerHP >= 100)
+        if (playerHP >= 100)
         {
             playerHP -= 100;
         }
@@ -4460,22 +7750,29 @@ int MakeGame(int c)
         AncientKeys += 1;
         map[y][x] = ' ';
     }
-    // Mace 1
-    /*if (map[y][x] == '1')
-    {
-        if (YesNoChoice())
-        {
-            WeaponArray[WeaponCount].mode = 1;
-            WeaponCount++;
-            map[y][x] = ' ';
-        }
-    }*/
     // Dagger 2
     if (map[y][x] == '2')
     {
         if (YesNoChoice())
         {
             WeaponArray[WeaponCount].mode = 2;
+            int haha = 0;
+            for (int i = 0; i < Wasted_Weapon_Count; i++)
+            {
+                if (Wasted_Weapon_Array[i].x == x && Wasted_Weapon_Array[i].y == y)
+                {
+                    haha = 1;
+                    break;
+                }
+            }
+            if (haha == 0)
+            {
+                WeaponArray[WeaponCount].times_use_left = 10;
+            }
+            else
+            {
+                WeaponArray[WeaponCount].times_use_left = 1;
+            }
             WeaponCount++;
             map[y][x] = ' ';
         }
@@ -4486,6 +7783,23 @@ int MakeGame(int c)
         if (YesNoChoice())
         {
             WeaponArray[WeaponCount].mode = 3;
+            int haha = 0;
+            for (int i = 0; i < Wasted_Weapon_Count; i++)
+            {
+                if (Wasted_Weapon_Array[i].x == x && Wasted_Weapon_Array[i].y == y)
+                {
+                    haha = 1;
+                    break;
+                }
+            }
+            if (haha == 0)
+            {
+                WeaponArray[WeaponCount].times_use_left = 8;
+            }
+            else
+            {
+                WeaponArray[WeaponCount].times_use_left = 1;
+            }
             WeaponCount++;
             map[y][x] = ' ';
         }
@@ -4496,6 +7810,23 @@ int MakeGame(int c)
         if (YesNoChoice())
         {
             WeaponArray[WeaponCount].mode = 4;
+            int haha = 0;
+            for (int i = 0; i < Wasted_Weapon_Count; i++)
+            {
+                if (Wasted_Weapon_Array[i].x == x && Wasted_Weapon_Array[i].y == y)
+                {
+                    haha = 1;
+                    break;
+                }
+            }
+            if (haha == 0)
+            {
+                WeaponArray[WeaponCount].times_use_left = 20;
+            }
+            else
+            {
+                WeaponArray[WeaponCount].times_use_left = 1;
+            }
             WeaponCount++;
             map[y][x] = ' ';
         }
@@ -4540,10 +7871,28 @@ int MakeGame(int c)
             map[y][x] = ' ';
         }
     }
-    // Food F
+    // Food
     if (map[y][x] == 'Z')
     {
         FoodArray[FoodCount].type = 0;
+        FoodCount++;
+        map[y][x] = ' ';
+    }
+    if (map[y][x] == 'X')
+    {
+        FoodArray[FoodCount].type = 1;
+        FoodCount++;
+        map[y][x] = ' ';
+    }
+    if (map[y][x] == 'C')
+    {
+        FoodArray[FoodCount].type = 2;
+        FoodCount++;
+        map[y][x] = ' ';
+    }
+    if (map[y][x] == 'V')
+    {
+        FoodArray[FoodCount].type = 3;
         FoodCount++;
         map[y][x] = ' ';
     }
@@ -4551,86 +7900,23 @@ int MakeGame(int c)
     if (map[y][x] == 'H')
     {
         hiden_door_show = 1;
-        /*if (YesNoChoice_H())
+        if (YesNoChoice_H())
         {
             clear();
             Telesm_Room();
             clear();
-        }*/
+        }
     }
-    
     // Weapon Inventory
     if (c == 'W' || c == 'w')
     {
-        int mace = 0;
-        int dagger = 0;
-        int magicwand = 0;
-        int normalarrow = 0;
-        int sword = 0;
-        for (int i = 0; i < WeaponCount; i++)
-        {
-            if (WeaponArray[i].mode == 1)
-            {
-                mace++;
-            }
-            if (WeaponArray[i].mode == 2)
-            {
-                dagger++;
-            }
-            if (WeaponArray[i].mode == 3)
-            {
-                magicwand++;
-            }
-            if (WeaponArray[i].mode == 4)
-            {
-                normalarrow++;
-            }
-            if (WeaponArray[i].mode == 5)
-            {
-                sword++;
-            }
-        }
-        clear();
-        mvprintw(0, 0, "Mace : %d", mace);
-        mvprintw(1, 0, "Dagger : %d", dagger);
-        mvprintw(2, 0, "Magic Wand : %d", magicwand);
-        mvprintw(3, 0, "Normal Arrow : %d", normalarrow);
-        mvprintw(4, 0, "Sword : %d", sword);
-        attron(A_BLINK);
-        mvprintw(7, 0, "Press any key to continue!");
-        attroff(A_BLINK);
-        char cc = getch();
+        WeaponChoice();
         clear();
     }
     // Spell Inventory
     if (c == 'S' || c == 's')
     {
-        int health = 0;
-        int speed = 0;
-        int damage = 0;
-        for (int i = 0; i < SpellCount; i++)
-        {
-            if (SpellArray[i].mode == 6)
-            {
-                health++;
-            }
-            if (SpellArray[i].mode == 7)
-            {
-                speed++;
-            }
-            if (SpellArray[i].mode == 8)
-            {
-                damage++;
-            }
-        }
-        clear();
-        mvprintw(0, 0, "Health : %d", health);
-        mvprintw(1, 0, "Speed : %d", speed);
-        mvprintw(2, 0, "Damage : %d", damage);
-        attron(A_BLINK);
-        mvprintw(5, 0, "Press any key to continue!");
-        attroff(A_BLINK);
-        char cc = getch();
+        SpellChoice();
         clear();
     }
     // Show Map
@@ -4733,7 +8019,7 @@ int MakeGame(int c)
         }
     }
 
-    // print limited corridors
+    // print limited corridors and fill corridor-array
     if (map[y][x] == '$')
     {
         CorridorArray[Corridor_Placed].x = x;
@@ -5008,512 +8294,6 @@ int MakeGame(int c)
             mvprintw(CorridorArray[ia].y, CorridorArray[ia].x, "%ls", message);
         }
     }
-    // Print Rooms
-    /*for (int index = 0; index < Room_Placed; index++)
-    {
-        if (RoomArray[index].show == true || m == 1)
-        {
-            for (int yy = (RoomArray[index].TopLeft_Y - 1); yy <= RoomArray[index].TopLeft_Y + RoomArray[index].Height; yy++)
-            {
-                for (int xx = (RoomArray[index].TopLeft_x - 1); xx <= RoomArray[index].TopLeft_x + RoomArray[index].Width; xx++)
-                {
-                    if (yy >= RoomArray[index].TopLeft_Y && yy <= (RoomArray[index].TopLeft_Y + RoomArray[index].Height - 1) &&
-                        xx >= RoomArray[index].TopLeft_x && xx <= (RoomArray[index].TopLeft_x + RoomArray[index].Width - 1))
-                    {
-                        if (map[yy][xx] != 'O')
-                        {
-                            if (map[yy][xx] == '^')
-                            {
-                                int ij;
-                                for (ij = 0; ij < Trap_Placed; ij++)
-                                {
-                                    if (yy == TrapArray[ij].y && xx == TrapArray[ij].x)
-                                    {
-                                        break;
-                                    }
-                                }
-                                if (TrapArray[ij].show == 1)
-                                {
-                                    attron(COLOR_PAIR(5));
-                                    mvaddch(yy, xx, '^');
-                                    attroff(COLOR_PAIR(5));
-                                }
-                                else
-                                {
-                                    attron(COLOR_PAIR(2));
-                                    mvaddch(yy, xx, '.');
-                                    attroff(COLOR_PAIR(2));
-                                }
-                            }
-                            else
-                            {
-                                if (map[yy][xx] == '<')
-                                {
-                                    attron(COLOR_PAIR(4));
-                                    mvaddch(yy, xx, '<');
-                                    attroff(COLOR_PAIR(4));
-                                }
-                                else
-                                {
-                                    if (map[yy][xx] == 'G')
-                                    {
-                                        attron(COLOR_PAIR(7));
-                                        wchar_t message[] = L"⋆";
-                                        mvprintw(yy, xx, "%ls", message);
-                                        attroff(COLOR_PAIR(7));
-                                    }
-                                    else
-                                    {
-                                        if (map[yy][xx] == 'g')
-                                        {
-                                            attron(COLOR_PAIR(7));
-                                            wchar_t message[] = L"⁕";
-                                            mvprintw(yy, xx, "%ls", message);
-                                            attroff(COLOR_PAIR(7));
-                                        }
-                                        else
-                                        {
-                                            if (map[yy][xx] == '&')
-                                            {
-                                                mvaddch(yy, xx, '&');
-                                            }
-                                            else
-                                            {
-                                                if (map[yy][xx] == 'A')
-                                                {
-                                                    attron(COLOR_PAIR(5));
-                                                    wchar_t message[] = L"⚷";
-                                                    mvprintw(yy, xx, "%ls", message);
-                                                    attroff(COLOR_PAIR(5));
-                                                }
-                                                else
-                                                {
-                                                    if (map[yy][xx] == '1' || map[yy][xx] == '2' || map[yy][xx] == '3' || map[yy][xx] == '4' || map[yy][xx] == '5')
-                                                    {
-                                                        // ⚒🗡🪄➳⚔
-                                                        // ⚒𐃉𝅀➳⚔
-                                                        if (map[yy][xx] == '1')
-                                                        {
-                                                            wchar_t message[] = L"⚒";
-                                                            mvprintw(yy, xx, "%ls", message);
-                                                        }
-                                                        if (map[yy][xx] == '2')
-                                                        {
-                                                            wchar_t message[] = L"𐃉";
-                                                            mvprintw(yy, xx, "%ls", message);
-                                                        }
-                                                        if (map[yy][xx] == '3')
-                                                        {
-                                                            wchar_t message[] = L"𝇗";
-                                                            mvprintw(yy, xx, "%ls", message);
-                                                        }
-                                                        if (map[yy][xx] == '4')
-                                                        {
-                                                            wchar_t message[] = L"➳";
-                                                            mvprintw(yy, xx, "%ls", message);
-                                                        }
-                                                        if (map[yy][xx] == '5')
-                                                        {
-                                                            wchar_t message[] = L"⚔";
-                                                            mvprintw(yy, xx, "%ls", message);
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        if (map[yy][xx] == '6' || map[yy][xx] == '7' || map[yy][xx] == '8')
-                                                        {
-                                                            if (map[yy][xx] == '6')
-                                                            {
-                                                                wchar_t message[] = L"♥";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '7')
-                                                            {
-                                                                wchar_t message[] = L"⌁";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '8')
-                                                            {
-                                                                wchar_t message[] = L"☣";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            if (map[yy][xx] == 'Z')
-                                                            {
-                                                                wchar_t message[] = L"₁";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            else
-                                                            {
-                                                                attron(COLOR_PAIR(2));
-                                                                mvaddch(yy, xx, '.');
-                                                                attroff(COLOR_PAIR(2));
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            attron(COLOR_PAIR(2));
-                            mvaddch(yy, xx, 'O');
-                            attroff(COLOR_PAIR(2));
-                        }
-                    }
-                    else
-                    {
-                        int countt = 0;
-                        if (map[yy][xx] == '$')
-                        {
-                            countt++;
-                        }
-                        if (yy == (RoomArray[index].TopLeft_Y - 1) || yy == (RoomArray[index].TopLeft_Y + RoomArray[index].Height))
-                        {
-                            if (countt == 1)
-                            {
-                                int buzinigga = 0;
-                                for (int fort = 0; fort < Door_Placed; fort++)
-                                {
-                                    if (DoorArray[fort].y == yy && DoorArray[fort].x == xx && DoorArray[fort].lock == true)
-                                    {
-                                        buzinigga = 1;
-                                    }
-                                }
-                                if (buzinigga == 0)
-                                {
-                                    attron(COLOR_PAIR(7));
-                                    wchar_t message[] = L"∎";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(7));
-                                }
-                                else
-                                {
-                                    attron(COLOR_PAIR(5));
-                                    wchar_t message[] = L"∎";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(5));
-                                }
-                            }
-                            else
-                            {
-                                attron(COLOR_PAIR(7));
-                                wchar_t message[] = L"≡";
-                                mvprintw(yy, xx, "%ls", message);
-                                attroff(COLOR_PAIR(7));
-                            }
-                        }
-                        else
-                        {
-                            if (countt == 1)
-                            {
-                                int buzinigga = 0;
-                                for (int fort = 0; fort < Door_Placed; fort++)
-                                {
-                                    if (DoorArray[fort].y == yy && DoorArray[fort].x == xx && DoorArray[fort].lock == true)
-                                    {
-                                        buzinigga = 1;
-                                    }
-                                }
-                                if (buzinigga == 0)
-                                {
-                                    attron(COLOR_PAIR(7));
-                                    wchar_t message[] = L"∎";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(7));
-                                }
-                                else
-                                {
-                                    attron(COLOR_PAIR(5));
-                                    wchar_t message[] = L"∎";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(5));
-                                }
-                            }
-                            else
-                            {
-                                attron(COLOR_PAIR(7));
-                                wchar_t message[] = L"‖";
-                                mvprintw(yy, xx, "%ls", message);
-                                attroff(COLOR_PAIR(7));
-                            }
-                        }
-                        // window∅
-                        for (int iji = 0; iji < Window_Placed; iji++)
-                        {
-                            if (WindowArray[iji].x == xx && WindowArray[iji].y == yy)
-                            {
-                                attron(COLOR_PAIR(4));
-                                wchar_t message[] = L"◻";
-                                mvprintw(yy, xx, "%ls", message);
-                                attroff(COLOR_PAIR(4));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (RoomArray[index].wdow == 2)
-            {
-                for (int yy = (RoomArray[index].TopLeft_Y - 1); yy <= RoomArray[index].TopLeft_Y + RoomArray[index].Height; yy++)
-                {
-                    for (int xx = (RoomArray[index].TopLeft_x - 1); xx <= RoomArray[index].TopLeft_x + RoomArray[index].Width; xx++)
-                    {
-                        if (yy >= RoomArray[index].TopLeft_Y && yy <= (RoomArray[index].TopLeft_Y + RoomArray[index].Height - 1) &&
-                            xx >= RoomArray[index].TopLeft_x && xx <= (RoomArray[index].TopLeft_x + RoomArray[index].Width - 1))
-                        {
-                            if (map[yy][xx] != 'O')
-                            {
-                                if (map[yy][xx] == '^')
-                                {
-                                    int ij;
-                                    for (ij = 0; ij < Trap_Placed; ij++)
-                                    {
-                                        if (yy == TrapArray[ij].y && xx == TrapArray[ij].x)
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    if (TrapArray[ij].show == 1)
-                                    {
-                                        attron(COLOR_PAIR(5));
-                                        mvaddch(yy, xx, '^');
-                                        attroff(COLOR_PAIR(5));
-                                    }
-                                    else
-                                    {
-                                        attron(COLOR_PAIR(2));
-                                        mvaddch(yy, xx, '.');
-                                        attroff(COLOR_PAIR(2));
-                                    }
-                                }
-                                else
-                                {
-                                    if (map[yy][xx] == '<')
-                                    {
-                                        attron(COLOR_PAIR(4));
-                                        mvaddch(yy, xx, '<');
-                                        attroff(COLOR_PAIR(4));
-                                    }
-                                    else
-                                    {
-                                        if (map[yy][xx] == 'G')
-                                        {
-                                            attron(COLOR_PAIR(7));
-                                            wchar_t message[] = L"⋆";
-                                            mvprintw(yy, xx, "%ls", message);
-                                            attroff(COLOR_PAIR(7));
-                                        }
-                                        else
-                                        {
-                                            if (map[yy][xx] == 'g')
-                                            {
-                                                attron(COLOR_PAIR(7));
-                                                wchar_t message[] = L"⁕";
-                                                mvprintw(yy, xx, "%ls", message);
-                                                attroff(COLOR_PAIR(7));
-                                            }
-                                            else
-                                            {
-                                                if (map[yy][xx] == '&')
-                                                {
-                                                    mvaddch(yy, xx, '&');
-                                                }
-                                                else
-                                                {
-                                                    if (map[yy][xx] == 'A')
-                                                    {
-                                                        attron(COLOR_PAIR(5));
-                                                        wchar_t message[] = L"⚷";
-                                                        mvprintw(yy, xx, "%ls", message);
-                                                        attroff(COLOR_PAIR(5));
-                                                    }
-                                                    else
-                                                    {
-                                                        if (map[yy][xx] == '1' || map[yy][xx] == '2' || map[yy][xx] == '3' || map[yy][xx] == '4' || map[yy][xx] == '5')
-                                                        {
-                                                            // ⚒🗡🪄➳⚔
-                                                            // ⚒𐃉𝅀➳⚔
-                                                            if (map[yy][xx] == '1')
-                                                            {
-                                                                wchar_t message[] = L"⚒";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '2')
-                                                            {
-                                                                wchar_t message[] = L"𐃉";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '3')
-                                                            {
-                                                                wchar_t message[] = L"𝇗";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '4')
-                                                            {
-                                                                wchar_t message[] = L"➳";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                            if (map[yy][xx] == '5')
-                                                            {
-                                                                wchar_t message[] = L"⚔";
-                                                                mvprintw(yy, xx, "%ls", message);
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            if (map[yy][xx] == '6' || map[yy][xx] == '7' || map[yy][xx] == '8')
-                                                            {
-                                                                if (map[yy][xx] == '6')
-                                                                {
-                                                                    wchar_t message[] = L"♥";
-                                                                    mvprintw(yy, xx, "%ls", message);
-                                                                }
-                                                                if (map[yy][xx] == '7')
-                                                                {
-                                                                    wchar_t message[] = L"⌁";
-                                                                    mvprintw(yy, xx, "%ls", message);
-                                                                }
-                                                                if (map[yy][xx] == '8')
-                                                                {
-                                                                    wchar_t message[] = L"☣";
-                                                                    mvprintw(yy, xx, "%ls", message);
-                                                                }
-                                                            }
-                                                            else
-                                                            {
-                                                                if (map[yy][xx] == 'Z')
-                                                                {
-                                                                    wchar_t message[] = L"₁";
-                                                                    mvprintw(yy, xx, "%ls", message);
-                                                                }
-                                                                else
-                                                                {
-                                                                    attron(COLOR_PAIR(2));
-                                                                    mvaddch(yy, xx, '.');
-                                                                    attroff(COLOR_PAIR(2));
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                attron(COLOR_PAIR(2));
-                                mvaddch(yy, xx, 'O');
-                                attroff(COLOR_PAIR(2));
-                            }
-                        }
-                        else
-                        {
-
-                            int countt = 0;
-                            if (map[yy][xx] == '$')
-                            {
-                                countt++;
-                            }
-                            if (yy == (RoomArray[index].TopLeft_Y - 1) || yy == (RoomArray[index].TopLeft_Y + RoomArray[index].Height))
-                            {
-                                if (countt == 1)
-                                {
-                                    int buzinigga = 0;
-                                    for (int fort = 0; fort < Door_Placed; fort++)
-                                    {
-                                        if (DoorArray[fort].y == yy && DoorArray[fort].x == xx && DoorArray[fort].lock == true)
-                                        {
-                                            buzinigga = 1;
-                                        }
-                                    }
-                                    if (buzinigga == 0)
-                                    {
-                                        attron(COLOR_PAIR(7));
-                                        wchar_t message[] = L"∎";
-                                        mvprintw(yy, xx, "%ls", message);
-                                        attroff(COLOR_PAIR(7));
-                                    }
-                                    else
-                                    {
-                                        attron(COLOR_PAIR(5));
-                                        wchar_t message[] = L"∎";
-                                        mvprintw(yy, xx, "%ls", message);
-                                        attroff(COLOR_PAIR(5));
-                                    }
-                                }
-                                else
-                                {
-                                    attron(COLOR_PAIR(7));
-                                    wchar_t message[] = L"≡";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(7));
-                                }
-                            }
-                            else
-                            {
-                                if (countt == 1)
-                                {
-                                    int buzinigga = 0;
-                                    for (int fort = 0; fort < Door_Placed; fort++)
-                                    {
-                                        if (DoorArray[fort].y == yy && DoorArray[fort].x == xx && DoorArray[fort].lock == true)
-                                        {
-                                            buzinigga = 1;
-                                        }
-                                    }
-                                    if (buzinigga == 0)
-                                    {
-                                        attron(COLOR_PAIR(7));
-                                        wchar_t message[] = L"∎";
-                                        mvprintw(yy, xx, "%ls", message);
-                                        attroff(COLOR_PAIR(7));
-                                    }
-                                    else
-                                    {
-                                        attron(COLOR_PAIR(5));
-                                        wchar_t message[] = L"∎";
-                                        mvprintw(yy, xx, "%ls", message);
-                                        attroff(COLOR_PAIR(5));
-                                    }
-                                }
-                                else
-                                {
-                                    attron(COLOR_PAIR(7));
-                                    wchar_t message[] = L"‖";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(7));
-                                }
-                            }
-                            // window∅
-                            for (int iji = 0; iji < Window_Placed; iji++)
-                            {
-                                if (WindowArray[iji].x == xx && WindowArray[iji].y == yy)
-                                {
-                                    attron(COLOR_PAIR(3));
-                                    wchar_t message[] = L"◻";
-                                    mvprintw(yy, xx, "%ls", message);
-                                    attroff(COLOR_PAIR(3));
-                                }
-                            }
-                        }
-                    }
-                }
-                RoomArray[index].wdow = -2;
-            }
-        }
-    }*/
-
     // Print Rooms
     for (int index = 0; index < Room_Placed; index++)
     {
@@ -6601,7 +9381,45 @@ int MakeGame(int c)
         }
     }
 
-
+    for (int carol = 0; carol < EnemyCount; carol++)
+    {
+        if (EnemyArray[carol].hp > 0)
+        {
+            int indexx = -1;
+            for (int index = 0; index < Room_Placed; index++)
+            {
+                if (EnemyArray[carol].y >= RoomArray[index].TopLeft_Y && EnemyArray[carol].y <= RoomArray[index].TopLeft_Y + RoomArray[index].Height - 1 &&
+                    EnemyArray[carol].x >= RoomArray[index].TopLeft_x && EnemyArray[carol].x <= RoomArray[index].TopLeft_x + RoomArray[index].Width - 1)
+                {
+                    indexx = index;
+                    break;
+                }
+            }
+            if (RoomArray[indexx].show == true || m == 1 || RoomArray[indexx].wdow == 2)
+            {
+                if (EnemyArray[carol].type == 'd')
+                {
+                    mvaddch(EnemyArray[carol].y, EnemyArray[carol].x, 'D');
+                }
+                if (EnemyArray[carol].type == 'f')
+                {
+                    mvaddch(EnemyArray[carol].y, EnemyArray[carol].x, 'F');
+                }
+                if (EnemyArray[carol].type == 't')
+                {
+                    mvaddch(EnemyArray[carol].y, EnemyArray[carol].x, 'G');
+                }
+                if (EnemyArray[carol].type == 's')
+                {
+                    mvaddch(EnemyArray[carol].y, EnemyArray[carol].x, 'S');
+                }
+                if (EnemyArray[carol].type == 'u')
+                {
+                    mvaddch(EnemyArray[carol].y, EnemyArray[carol].x, 'U');
+                }
+            }
+        }
+    }
     /*for (int yy = 0; yy <= rows; yy++)
     {
         for (int xx = 0; xx <= cols; xx++)
@@ -6609,7 +9427,7 @@ int MakeGame(int c)
             mvaddch(yy,xx,map[yy][xx]);
         }
     }*/
-
+    // set color
     if (color == 0)
     {
         attron(COLOR_PAIR(5) | A_BOLD);
@@ -6891,6 +9709,21 @@ int MakeGame(int c)
     mvprintw(rows, 0, "%ls  %d                                                                             %ls  %d     %ls  %d                                                                             %ls  %d", 
     messag1,playerGOLD, messag3,AncientKeys - UsedKey,messag4, MovesTillLastFood, messag6,level);
     firsttime = false;
+    if (speed > 0)
+    {
+        if (speed == 2)
+        {
+            speed -= 0.1;
+        }
+        else
+        {
+            speed -= 0.1;
+            if (((int)(speed * 10)) % 2 == 0 && speed > 0)
+            {
+                MakeGame(c);
+            }
+        }
+    }
 }
 
 void NewGame()
@@ -6898,14 +9731,26 @@ void NewGame()
     start_color();
     clear();
     curs_set(0);
-    int c=113;
+    int c = 113;
     keypad(stdscr, true);
     noecho();
     do
     {
+        // Lose
+        if (playerHP <= 0)
+        {
+            Lose();
+        }
         MakeGame(c);
         refresh();
+        // Lose
+        if (playerHP <= 0)
+        {
+            Lose();
+        }
     } while ((c = getch()) != 27);
+    endwin();
+    exit(0);
 }
 
 void Times_PLayed()
